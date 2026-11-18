@@ -1,0 +1,8 @@
+{
+  "name": "modulelab-web",
+  "private": true,
+  "scripts": {
+    "check": "node --check web/app.js",
+    "build": "node scripts/build.cjs"
+  }
+}

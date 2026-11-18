@@ -1,0 +1,567 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 320 200">
+  <defs>
+    <linearGradient id="metal" x2=".3" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#a1b6d9"/></linearGradient>
+    <linearGradient id="dark" x2=".3" y2="1"><stop stop-color="#446090"/><stop offset="1" stop-color="#15294d"/></linearGradient>
+    <linearGradient id="glass" x2=".65" y2="1"><stop stop-color="#8ef4ff"/><stop offset=".5" stop-color="#4078bf"/><stop offset="1" stop-color="#152b58"/></linearGradient>
+    <linearGradient id="warm" x2=".2" y2="1"><stop stop-color="#ffe18a"/><stop offset="1" stop-color="#e9a63a"/></linearGradient>
+    <linearGradient id="teal" x2=".2" y2="1"><stop stop-color="#51b9a3"/><stop offset="1" stop-color="#145862"/></linearGradient>
+    <pattern id="speaker-grid" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M2 2h1v1H2z" fill="#7190b0"/></pattern>
+    <pattern id="carbon" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M0 0h2v2H0zm2 2h2v2H2z" fill="#d0dae5" opacity=".14"/></pattern>
+    <pattern id="vents" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".9" fill="#0d192d"/></pattern>
+    <linearGradient id="brushed" x2="0%" y2="100%"><stop stop-color="#dae0e7"/><stop offset=".47" stop-color="#9ba9b6"/><stop offset=".5" stop-color="#b5c0ca"/><stop offset="1" stop-color="#67788a"/></linearGradient>
+    <linearGradient id="graphite" x2="0%" y2="100%"><stop stop-color="#53616c"/><stop offset=".42" stop-color="#293642"/><stop offset="1" stop-color="#111a24"/></linearGradient>
+    <linearGradient id="circuit" x2="100%" y2="100%"><stop stop-color="#457a64"/><stop offset="1" stop-color="#18362c"/></linearGradient>
+    <linearGradient id="desktop-light" x1="0%" y1="100%" x2="100%" y2="0%"><stop stop-color="#152a59"/><stop offset=".66" stop-color="#247899"/><stop offset="1" stop-color="#8cd4cf"/></linearGradient>
+    <g id="rotor">
+      <ellipse rx="43" ry="13" fill="#c0ddff" opacity=".21" stroke="#c5e3ff" stroke-width=".9" stroke-dasharray="3 3"/>
+      <path d="M-9 0v8c0 6 18 6 18 0V0z" fill="#283f6c" stroke="#11223f" stroke-width="1.4"/>
+      <ellipse rx="9" ry="5" fill="#dce9ff" stroke="#36537e" stroke-width="1.15"/>
+      <path d="M-3-2C-16-11-36-10-39-5c-2 4 19 7 36 6C8 7 33 12 39 6c4-5-23-9-36-7z" fill="#263b64" stroke="#adc4e4" stroke-width="1"/>
+      <ellipse rx="4.7" ry="2.7" cy="-1" fill="#f0f6ff" stroke="#58749c" stroke-width="1"/>
+    </g>
+  </defs>
+
+  <symbol id="brand" viewBox="0 0 320 200">
+    <path d="M160 10 245 58v91l-85 44-86-44V58z" fill="#2448d8"/>
+    <path d="m76 58 84 48 85-48-85-48z" fill="#5a82ff"/>
+    <path d="m160 106 85-48v91l-85 44z" fill="#173380"/>
+    <path d="m109 43 84 48m-73 0 84-48m-44 64v86" fill="none" stroke="#c5d6ff" stroke-width="6"/>
+    <path d="m184 134 31-17v22l-31 17z" fill="#ffdb73"/>
+  </symbol>
+
+  <symbol id="drone" viewBox="0 0 320 200">
+    <path d="M15 145h31l20-22m242 17h-35l-13-15M19 55h32l13 14m240-15h-39l-16 13M160 25v20m0 111v23M131 173h58" fill="none" stroke="#d9e9ff" stroke-width=".9" stroke-dasharray="3 3" opacity=".68"/>
+    <circle cx="160" cy="102" r="66" fill="none" stroke="#c7ddff" stroke-width=".65" opacity=".42"/>
+    <ellipse cx="159" cy="163" rx="103" ry="12" fill="#102678" opacity=".23"/>
+    <g stroke="#15294d" stroke-width="1.8" stroke-linejoin="round">
+      <path d="m137 88-60-27-16 1-4 13 65 34m63-24 59-25 15 4 2 11-61 34" fill="url(#dark)"/>
+      <path d="m136 83-62-28-12 3 3 11 61 30m57-16 60-29 14 5-4 11-62 28" fill="url(#metal)"/>
+    </g>
+    <use xlink:href="#rotor" transform="translate(68 58) rotate(-5) scale(.88)"/>
+    <use xlink:href="#rotor" transform="translate(250 57) rotate(5) scale(.89)"/>
+    <g stroke="#162e55" stroke-width="1.6" stroke-linejoin="round">
+      <path d="m130 112-78 19-12-4 3-13 75-29m72 27 79 18 11-4-4-13-72-26" fill="url(#dark)"/>
+      <path d="m126 102-74 23-11-5 8-10 76-24m67 15 73 23 14-5-11-10-77-24" fill="url(#metal)"/>
+      <path d="M118 93c2-13 20-22 43-22 24 0 43 8 45 23l-4 28c-4 10-18 17-41 17-24 0-38-6-42-17z" fill="url(#dark)"/>
+      <path d="M121 91c2-11 19-21 40-21s40 9 42 20l-4 20c-3 7-17 12-38 12-21 0-34-4-37-12z" fill="url(#metal)"/>
+      <path d="M135 86c5-5 15-8 26-8s22 3 27 8l-7 10h-41z" fill="#d2def0" stroke="#859abb" stroke-width=".9"/>
+      <path d="M127 106c5 5 17 8 34 8s29-3 34-8" fill="none" stroke="#7794bd" stroke-width="1"/>
+      <path d="m125 119-8 18h-15m95-18 8 18h16" fill="none" stroke-width="4" stroke-linecap="round"/>
+      <path d="M139 120v16q21 20 44 0v-16" fill="none" stroke="#131f39" stroke-width="5"/>
+      <rect x="144" y="125" width="34" height="27" rx="6" fill="#283a5a" stroke="#afc4db"/>
+      <circle cx="161" cy="138" r="10" fill="#131f36" stroke="#7590b6"/>
+      <circle cx="161" cy="138" r="6.4" fill="url(#glass)" stroke="#101f3b"/>
+      <circle cx="159" cy="135" r="2.4" fill="#c5fcff" stroke="none"/>
+    </g>
+    <use xlink:href="#rotor" transform="translate(49 116) rotate(-8)"/>
+    <use xlink:href="#rotor" transform="translate(271 116) rotate(8)"/>
+    <path d="m54 129 10-2m193 0 10 2" fill="none" stroke="#ffd463" stroke-width="3.7" stroke-linecap="round"/>
+    <path d="M155 101h12" stroke="#354f7b" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="propeller" viewBox="0 0 320 200">
+    <ellipse cx="161" cy="166" rx="92" ry="12" fill="#273f85" opacity=".15"/>
+    <path d="M109 92h102v45q-6 29-51 29t-51-29z" fill="url(#dark)" stroke="#15294d" stroke-width="4"/>
+    <path d="M118 113v24m12-19v27m61-27v27m12-33v25" stroke="#a2b7d3" stroke-width="4"/>
+    <ellipse cx="160" cy="92" rx="51" ry="24" fill="url(#metal)" stroke="#354f7b" stroke-width="4"/>
+    <use xlink:href="#rotor" transform="translate(160 77) rotate(-8) scale(3.25)"/>
+  </symbol>
+
+  <symbol id="chip" viewBox="0 0 320 200">
+    <rect x="64" y="32" width="192" height="136" rx="14" fill="url(#teal)" stroke="#123c55" stroke-width="4"/>
+    <path d="M77 51h45l20 33m-66 65h49l23-32m94-63h-49l-22 30m72 62h-48l-19-25" fill="none" stroke="#c0dd96" stroke-width="3"/>
+    <path d="M116 65h88v71h-88z" fill="#81aebb" stroke="#102940" stroke-width="3"/>
+    <path d="M126 74h68v53h-68z" fill="url(#dark)" stroke="#a1bde0" stroke-width="2"/>
+    <path d="M141 83h37m-37 8h24" stroke="#81a0c5" stroke-width="3"/>
+    <path d="M77 92h19v21H77zm147 3h19v19h-19z" fill="#d4e0ee" stroke="#394f7d" stroke-width="2"/>
+    <g fill="#ffe68e"><circle cx="80" cy="48" r="5"/><circle cx="240" cy="48" r="5"/><circle cx="80" cy="151" r="5"/><circle cx="240" cy="151" r="5"/></g>
+  </symbol>
+
+  <symbol id="camera" viewBox="0 0 320 200">
+    <path d="M92 42v92q68 62 136 0V42" fill="none" stroke="#243e70" stroke-width="20"/>
+    <path d="M89 43h142" stroke="#9fb5d9" stroke-width="13" stroke-linecap="round"/>
+    <rect x="99" y="63" width="122" height="91" rx="16" fill="url(#dark)" stroke="#7690ba" stroke-width="4"/>
+    <circle cx="160" cy="108" r="38" fill="#172744" stroke="#adc2e0" stroke-width="4"/>
+    <circle cx="160" cy="108" r="28" fill="url(#glass)" stroke="#111f38" stroke-width="4"/>
+    <ellipse cx="150" cy="96" rx="13" ry="8" fill="#cbfaff" opacity=".85"/>
+    <circle cx="208" cy="81" r="4" fill="#ffd571"/>
+  </symbol>
+
+  <symbol id="gps" viewBox="0 0 320 200">
+    <path d="M109 51q51-47 102 0m-82 11q31-29 62 0m-45 12q14-12 28 0" stroke="#2460ce" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="m78 118 84-32 79 32v27l-79 33-84-29z" fill="url(#teal)" stroke="#16405f" stroke-width="4"/>
+    <path d="m104 114 58-23 52 23-52 23z" fill="#f1dfba" stroke="#745e55" stroke-width="3"/>
+    <path d="m134 114 28-12 25 12-25 12z" fill="#dfa852"/>
+    <path d="M88 139v9m11-5v9m12-5v10m13-5v9m12-4v8m13-4v9" stroke="#ffe789" stroke-width="3"/>
+  </symbol>
+
+  <symbol id="radio" viewBox="0 0 320 200">
+    <path d="M109 105 80 40m129 65 31-65" stroke="#273d65" stroke-width="8" stroke-linecap="round"/>
+    <path d="M130 61q30-26 60 0m-49 13q19-17 38 0" stroke="#3470da" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <rect x="69" y="88" width="182" height="66" rx="12" fill="url(#dark)" stroke="#152a50" stroke-width="4"/>
+    <path d="M82 135h157" stroke="#567aaa" stroke-width="3"/>
+    <circle cx="93" cy="114" r="6" fill="#75e1af"/><circle cx="115" cy="114" r="6" fill="#ffd770"/>
+    <path d="M184 110h47m-47 10h47" stroke="#abc2e2" stroke-width="3"/>
+  </symbol>
+
+  <symbol id="battery" viewBox="0 0 320 200">
+    <path d="M233 78h24v43h-24z" fill="#8297bb" stroke="#233e70" stroke-width="4"/>
+    <rect x="65" y="60" width="176" height="79" rx="12" fill="url(#dark)" stroke="#19345f" stroke-width="4"/>
+    <path d="M77 70h143" stroke="#819fc8" stroke-width="3"/>
+    <path d="m157 72-31 38h25l-6 20 36-40h-27z" fill="#ffdb73"/>
+    <path d="M82 126v-10m11 10v-10m110 10v-10m11 10v-10" stroke="#7494bb" stroke-width="3"/>
+  </symbol>
+
+  <symbol id="computer" viewBox="0 0 320 200">
+    <ellipse cx="163" cy="174" rx="135" ry="9" fill="#213761" opacity=".16"/>
+    <path d="M119 131h25v25h26v10H91v-10h28z" fill="#6b89b5" stroke="#293f69" stroke-width="3"/>
+    <rect x="35" y="44" width="175" height="95" rx="9" fill="url(#dark)" stroke="#162a4c" stroke-width="4"/>
+    <rect x="44" y="53" width="157" height="73" rx="4" fill="url(#glass)"/>
+    <path d="m62 112 35-41 28 31 23-20 29 30z" fill="#a8e1f8" opacity=".8"/>
+    <path d="m219 38 48-8 20 12v113l-20 13-48-7z" fill="url(#dark)" stroke="#18294e" stroke-width="4"/>
+    <path d="m267 32 19 10v114l-19 10z" fill="#6480a8"/>
+    <circle cx="240" cy="61" r="6" fill="#70edb2"/>
+    <path d="M231 81h25m-25 10h25m-25 10h25m-25 34h25m-25 10h25" stroke="#7696bf" stroke-width="3"/>
+  </symbol>
+
+  <symbol id="phone" viewBox="0 0 320 200">
+    <ellipse cx="165" cy="178" rx="71" ry="8" fill="#182c63" opacity=".17"/>
+    <g transform="rotate(13 160 100)">
+      <rect x="112" y="24" width="96" height="154" rx="17" fill="#15284c" stroke="#718ab0" stroke-width="4"/>
+      <rect x="118" y="30" width="84" height="142" rx="13" fill="url(#glass)"/>
+      <path d="M118 119q29-51 84-34v75q-31-19-84 5z" fill="#71b9f6" opacity=".9"/>
+      <path d="M118 136q38-25 84-19v43q-31-19-84 5z" fill="#bceafb" opacity=".8"/>
+      <rect x="145" y="36" width="30" height="7" rx="4" fill="#182c50"/>
+      <rect x="144" y="162" width="32" height="3" rx="2" fill="#1d3f75"/>
+    </g>
+  </symbol>
+
+  <symbol id="bike" viewBox="0 0 320 200">
+    <ellipse cx="161" cy="169" rx="129" ry="8" fill="#142956" opacity=".16"/>
+    <g fill="none" stroke="#263c62" stroke-width="8"><circle cx="77" cy="123" r="43"/><circle cx="242" cy="123" r="43"/></g>
+    <g fill="none" stroke="#8ba1c2" stroke-width="1.5"><path d="M77 83v80m-40-40h80m-69-29 58 58m0-58-58 58m194-69v80m-40-40h80m-69-29 58 58m0-58-58 58"/></g>
+    <path d="m77 123 38-60h98l-57 65-79-5m38-60 41 65m57-65 29 60" fill="none" stroke="#965a14" stroke-width="10" stroke-linejoin="round"/>
+    <path d="m77 121 38-60h98l-57 65-79-5m38-60 41 65m57-65 29 60" fill="none" stroke="#ffcf62" stroke-width="7" stroke-linejoin="round"/>
+    <path d="m116 62-8-20m103 24-13-40h-17" fill="none" stroke="#263c62" stroke-width="7" stroke-linecap="round"/>
+    <path d="M86 43h39l-5-9H91z" fill="#24395a"/>
+    <circle cx="156" cy="127" r="10" fill="#526d96" stroke="#20395f" stroke-width="3"/>
+    <path d="m156 127 14 14h14" fill="none" stroke="#24395a" stroke-width="4" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="speaker" viewBox="0 0 320 200">
+    <ellipse cx="159" cy="162" rx="101" ry="9" fill="#162b55" opacity=".16"/>
+    <rect x="56" y="50" width="208" height="103" rx="30" fill="url(#dark)" stroke="#182c54" stroke-width="4"/>
+    <rect x="68" y="63" width="184" height="77" rx="23" fill="url(#speaker-grid)" stroke="#607ea9" stroke-width="3"/>
+    <path d="M124 50v-9h70v9" fill="#6f8bb3" stroke="#244168" stroke-width="3"/>
+    <path d="M151 45h18m-9-5v10" stroke="#e8f4ff" stroke-width="2"/>
+    <circle cx="160" cy="100" r="7" fill="#75e1b4"/>
+  </symbol>
+
+  <symbol id="vacuum" viewBox="0 0 320 200">
+    <ellipse cx="161" cy="162" rx="110" ry="14" fill="#19376a" opacity=".18"/>
+    <path d="M56 101q105 24 208 0v21c0 33-47 58-104 58S56 155 56 122z" fill="url(#dark)" stroke="#14294f" stroke-width="4"/>
+    <ellipse cx="160" cy="99" rx="104" ry="55" fill="url(#metal)" stroke="#3f5d88" stroke-width="4"/>
+    <path d="M67 122c37 44 151 45 186 0" fill="none" stroke="#657fac" stroke-width="3"/>
+    <ellipse cx="160" cy="88" rx="26" ry="12" fill="#253d61" stroke="#7492bd" stroke-width="3"/>
+    <ellipse cx="160" cy="82" rx="25" ry="10" fill="#dfeaff" stroke="#6c88b2" stroke-width="2"/>
+    <ellipse cx="184" cy="120" rx="13" ry="6" fill="#61cdb4" stroke="#3c708e" stroke-width="2"/>
+    <path d="M137 160h46" stroke="#6b91b9" stroke-width="4" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="cabinet" viewBox="0 0 320 200">
+    <ellipse cx="163" cy="176" rx="89" ry="8" fill="#122854" opacity=".14"/>
+    <path d="m88 43 33-17h118v124l-30 19H88z" fill="url(#warm)" stroke="#71491f" stroke-width="4"/>
+    <path d="M207 44 239 26v124l-30 19z" fill="#bd8035" stroke="#71491f" stroke-width="3"/>
+    <path d="M96 54h104v46H96zm0 53h49v54H96zm55 0h49v54h-49z" fill="#ffda84" stroke="#855623" stroke-width="3"/>
+    <path d="M134 77h29m-30 56v14m30-14v14" stroke="#523b2d" stroke-width="4" stroke-linecap="round"/>
+    <path d="M98 169v7m97-7v7m31-18v10" stroke="#5c432c" stroke-width="8"/>
+  </symbol>
+
+  <symbol id="eraser" viewBox="0 0 320 200">
+    <path d="m67 110 53-61 139 38-53 67-139-26z" fill="#ecb9cf" stroke="#653d69" stroke-width="4"/>
+    <path d="m67 110 139 28v16L67 128z" fill="#bf749b" stroke="#653d69" stroke-width="3"/>
+    <path d="m206 138 53-51v16l-53 51z" fill="#9e648e" stroke="#653d69" stroke-width="3"/>
+    <path d="m89 109 43-48 101 28" fill="none" stroke="#fff3fd" stroke-width="3" opacity=".8"/>
+  </symbol>
+
+  <symbol id="cup" viewBox="0 0 320 200">
+    <ellipse cx="164" cy="170" rx="72" ry="9" fill="#1f3565" opacity=".17"/>
+    <path d="M192 68h19c42 0 41 62-7 65h-19" fill="none" stroke="#3967a0" stroke-width="17"/>
+    <path d="M192 68h19c42 0 41 62-7 65h-19" fill="none" stroke="#9ed4fa" stroke-width="10"/>
+    <path d="M92 56h108l-13 94q-7 16-41 16t-42-16z" fill="url(#glass)" stroke="#2e5589" stroke-width="4"/>
+    <ellipse cx="146" cy="55" rx="54" ry="19" fill="#b6e3ff" stroke="#2e5589" stroke-width="4"/>
+    <ellipse cx="146" cy="57" rx="45" ry="13" fill="#386caa"/>
+    <path d="m111 80 9 60" stroke="#c7efff" stroke-width="5" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="chair" viewBox="0 0 320 200">
+    <ellipse cx="158" cy="175" rx="107" ry="9" fill="#172f57" opacity=".24"/>
+    <path d="M103 155h128v14H98z" fill="#202c4e" stroke="#172345" stroke-width="4"/>
+    <path d="M211 31q-22-11-58 0-18 6-26 27l-14 47-51-2-13 41 40 18h137l28-20-3-62q-1-32-40-49z" fill="url(#dark)" stroke="#14294d" stroke-width="4"/>
+    <path d="M204 32q-40-12-61 15l-18 50h58l25-48q3-10-4-17z" fill="#dbc5ad" stroke="#644d54" stroke-width="3"/>
+    <path d="M127 96H73l-13 41 47 13 29-28h52l35-25z" fill="#c6ab98" stroke="#644d54" stroke-width="3"/>
+    <path d="M173 151l-8-22 14-31 49-14 25 8v51l-27 17z" fill="#8b6570" stroke="#4e465d" stroke-width="3"/>
+    <path d="m174 126 58-19 16 4m-179 7 46 12m42-83 27 3m-35 12 30 3m-35 11 29 4" fill="none" stroke="#fbdbbe" stroke-width="3" opacity=".8"/>
+    <circle cx="234" cy="96" r="4" fill="#64d6af"/>
+  </symbol>
+
+  <symbol id="cooker" viewBox="0 0 320 200">
+    <ellipse cx="161" cy="174" rx="97" ry="10" fill="#143966" opacity=".18"/>
+    <path d="M72 83h176l-4 62q-9 23-84 23-76 0-84-23z" fill="url(#metal)" stroke="#294671" stroke-width="4"/>
+    <ellipse cx="160" cy="82" rx="89" ry="35" fill="#e5effb" stroke="#3b5c89" stroke-width="4"/>
+    <path d="M107 78q18-25 53-25t53 25q-58 18-106 0z" fill="#7694bd" stroke="#4e6b94" stroke-width="3"/>
+    <rect x="139" y="52" width="44" height="12" rx="5" fill="#577ba8" stroke="#304e78" stroke-width="2"/>
+    <rect x="113" y="122" width="94" height="29" rx="9" fill="url(#dark)" stroke="#1a315c" stroke-width="3"/>
+    <rect x="137" y="129" width="42" height="13" rx="4" fill="#a4efcc"/><circle cx="191" cy="135" r="4" fill="#fed572"/>
+  </symbol>
+
+  <symbol id="car" viewBox="0 0 320 200">
+    <ellipse cx="160" cy="151" rx="135" ry="10" fill="#182c5a" opacity=".16"/>
+    <path d="m34 111 10-20 36-8 30-31q18-13 45-13l42 3 39 35 35 10 15 14 1 30-23 8H48l-16-10z" fill="url(#warm)" stroke="#683d32" stroke-width="4"/>
+    <path d="m94 81 27-25q11-9 37-9l31 2 32 30z" fill="url(#glass)" stroke="#334c69" stroke-width="3"/>
+    <path d="m160 48 4 32m66 15h25m-194 9H43m56 21h120" stroke="#905830" stroke-width="4"/>
+    <circle cx="78" cy="132" r="22" fill="#24354f" stroke="#162440" stroke-width="3"/><circle cx="243" cy="132" r="22" fill="#24354f" stroke="#162440" stroke-width="3"/>
+    <circle cx="78" cy="132" r="11" fill="#a1b9d4"/><circle cx="243" cy="132" r="11" fill="#a1b9d4"/>
+    <path d="M255 91h19l9 11h-27z" fill="#fff0ba"/>
+  </symbol>
+
+  <symbol id="light" viewBox="0 0 320 200">
+    <path d="M132 123v23h56v-23c0-20 19-21 19-52a47 47 0 0 0-94 0c0 30 19 32 19 52z" fill="url(#warm)" stroke="#8b6330" stroke-width="4"/>
+    <path d="M144 126v-26h32v26m-31-26-11-22m41 22 11-22" fill="none" stroke="#fff3c2" stroke-width="5" stroke-linecap="round"/>
+    <path d="M133 135h54v27l-10 12h-33l-11-12z" fill="url(#dark)" stroke="#193154" stroke-width="4"/>
+    <path d="M134 146h51m-51 9h51M90 69H71m177 0h-19M101 42 84 28m135 14 17-14" fill="none" stroke="#657da8" stroke-width="5" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="board" viewBox="0 0 320 200">
+    <rect x="51" y="27" width="218" height="147" rx="12" fill="url(#teal)" stroke="#153b58" stroke-width="4"/>
+    <path d="M66 68h38l30 24m-62 51h35l40-37m72-54h-22l-28 35m87 47h-47l-32-30m-63 60v-23l26-28m54 51v-24l-23-27m-78 3 23-19m113 9-40-22" fill="none" stroke="#b9dea3" stroke-width="2.5"/>
+    <path d="M113 59h73v70h-73z" fill="#7588a6" stroke="#243957" stroke-width="4"/>
+    <path d="M121 67h57v54h-57z" fill="url(#metal)" stroke="#b8d0ea" stroke-width="2"/>
+    <path d="M130 80h37m-37 8h29m-29 16h18" stroke="#5f7ca9" stroke-width="2"/>
+    <path d="M200 62h10v61h-10zm15 0h10v61h-10z" fill="#d5dff5" stroke="#344d74" stroke-width="2"/>
+    <path d="M233 52h17v61h-17z" fill="#283a56" stroke="#c5cde7" stroke-width="2"/>
+    <path d="M237 59h10m-10 7h10m-10 7h10m-10 7h10m-10 7h10m-10 7h10m-10 7h10" stroke="#aab8d7" stroke-width="2"/>
+    <path d="M67 81h30v14H67zm0 21h30v15H67z" fill="#c5d9f2" stroke="#27476a" stroke-width="3"/>
+    <path d="M71 86h19m-19 22h19" stroke="#506f9d" stroke-width="2"/>
+    <path d="M126 143h38v15h-38zm43 0h38v15h-38z" fill="#adc5e5" stroke="#294a6b" stroke-width="3"/>
+    <g fill="#ffe296" stroke="#21546b" stroke-width="2"><circle cx="65" cy="41" r="6"/><circle cx="255" cy="41" r="6"/><circle cx="66" cy="161" r="6"/><circle cx="255" cy="160" r="6"/></g>
+  </symbol>
+
+  <symbol id="psu" viewBox="0 0 320 200">
+    <path d="m67 61 53-28 133 22v81l-53 30-133-29z" fill="url(#dark)" stroke="#182b50" stroke-width="4"/>
+    <path d="m67 61 135 24 51-30-133-22z" fill="#7f98b8" stroke="#243d64" stroke-width="3"/>
+    <path d="M201 85v81l52-30V55z" fill="#445e85" stroke="#223a60" stroke-width="3"/>
+    <ellipse cx="143" cy="60" rx="45" ry="14" fill="#263b62" stroke="#cfdbec" stroke-width="3"/>
+    <path d="m113 54 53 12m-43-16 54 12m-77-4 51 13m2-21-22 20m36-18-22 20" stroke="#9fb4d3" stroke-width="2"/>
+    <path d="m86 90 38 7v24l-38-7z" fill="#152646" stroke="#9fb4d3" stroke-width="2"/>
+    <path d="m141 103 42 8m-42 0 42 8m-42 0 42 8" stroke="#7895bb" stroke-width="3"/>
+  </symbol>
+
+  <symbol id="ram" viewBox="0 0 320 200">
+    <g transform="rotate(-11 160 100)">
+      <path d="M47 64h226v74H164v-9h-11v9H47z" fill="url(#teal)" stroke="#1e445d" stroke-width="4"/>
+      <path d="M57 123h89v15H57zm114 0h92v15h-92z" fill="#f8cc66"/>
+      <path d="M65 126v13m9-13v13m9-13v13m9-13v13m9-13v13m9-13v13m9-13v13m9-13v13m9-13v13m42-13v13m9-13v13m9-13v13m9-13v13m9-13v13m9-13v13m9-13v13m9-13v13m9-13v13" stroke="#765b30" stroke-width="2"/>
+      <path d="M66 79h38v32H66zm49 0h38v32h-38zm51 0h38v32h-38zm49 0h38v32h-38z" fill="url(#dark)" stroke="#acc9cc" stroke-width="2"/>
+    </g>
+  </symbol>
+
+  <symbol id="disk" viewBox="0 0 320 200">
+    <rect x="86" y="33" width="148" height="129" rx="12" fill="url(#metal)" stroke="#274770" stroke-width="4"/>
+    <circle cx="149" cy="90" r="42" fill="#b5cce7" stroke="#59799f" stroke-width="4"/>
+    <circle cx="149" cy="90" r="30" fill="none" stroke="#e9f5ff" stroke-width="3"/>
+    <circle cx="149" cy="90" r="11" fill="#546e95"/>
+    <path d="m212 129-30-44-12 8 27 43z" fill="url(#dark)" stroke="#233b63" stroke-width="3"/>
+    <circle cx="206" cy="131" r="12" fill="#54719b" stroke="#233b63" stroke-width="3"/>
+    <path d="M116 162h95v10h-95z" fill="#2f4261"/><path d="M123 163h20m10 0h49" stroke="#f0c86d" stroke-width="3"/>
+  </symbol>
+
+  <symbol id="monitor" viewBox="0 0 320 200">
+    <path d="M144 130h32v25h40v13H104v-13h40z" fill="#839bc0" stroke="#294773" stroke-width="3"/>
+    <rect x="50" y="35" width="220" height="104" rx="9" fill="url(#dark)" stroke="#14294f" stroke-width="4"/>
+    <rect x="60" y="45" width="200" height="80" rx="4" fill="url(#glass)"/>
+    <path d="m78 120 52-65 25 0-45 65z" fill="#beedff" opacity=".29"/>
+    <circle cx="251" cy="132" r="3" fill="#83d7ad"/>
+  </symbol>
+
+  <symbol id="keyboard" viewBox="0 0 320 200">
+    <path d="m60 59 193 0 26 74-241 0z" fill="url(#metal)" stroke="#29486f" stroke-width="4"/>
+    <path d="M38 133h241v11H38z" fill="#6f8bb5" stroke="#29486f" stroke-width="4"/>
+    <path d="M71 76h138m-145 15h160m-165 15h174m-181 15h58m15 0h73m12 0h37" stroke="#2c4871" stroke-width="8" stroke-linecap="round" stroke-dasharray="7 5"/>
+    <path d="M125 121h61" stroke="#2c4871" stroke-width="8" stroke-linecap="round"/>
+    <path d="M159 59V40q0-14 16-14h24" fill="none" stroke="#2c4871" stroke-width="4"/>
+  </symbol>
+
+  <symbol id="boot" viewBox="0 0 320 200">
+    <use xlink:href="#monitor"/>
+    <circle cx="160" cy="85" r="26" fill="#147c69" stroke="#b4f9df" stroke-width="3"/>
+    <path d="m147 85 9 9 17-19" fill="none" stroke="#d4ffee" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+
+  <symbol id="robot" viewBox="0 0 320 200">
+    <ellipse cx="160" cy="179" rx="100" ry="11" fill="#102962" opacity=".27"/>
+    <path d="M160 48V26" stroke="#a1badc" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="160" cy="22" r="8" fill="#ffdb73" stroke="#a36b27" stroke-width="2.5"/>
+    <rect x="102" y="129" width="35" height="49" rx="12" fill="url(#dark)" stroke="#182f55" stroke-width="4"/>
+    <rect x="183" y="129" width="35" height="49" rx="12" fill="url(#dark)" stroke="#182f55" stroke-width="4"/>
+    <path d="M111 144h18m-18 10h18m62-10h18m-18 10h18" stroke="#82a0c7" stroke-width="3"/>
+    <path d="m108 107-34 13-12 22m150-35 32 12 14 22" fill="none" stroke="#183957" stroke-width="13" stroke-linecap="round"/>
+    <path d="m105 106-29 14-11 17m150-31 29 14 11 17" fill="none" stroke="#a6bfdf" stroke-width="7" stroke-linecap="round"/>
+    <rect x="104" y="92" width="112" height="70" rx="18" fill="url(#metal)" stroke="#43638e" stroke-width="4"/>
+    <path d="M131 131h59v18h-59z" fill="url(#teal)" stroke="#204e69" stroke-width="2"/>
+    <path d="M142 140h15m8 0h15" stroke="#d9faee" stroke-width="3" stroke-linecap="round"/>
+    <rect x="92" y="46" width="136" height="69" rx="24" fill="url(#metal)" stroke="#335783" stroke-width="4"/>
+    <rect x="105" y="58" width="110" height="44" rx="17" fill="#19395e" stroke="#6c96bd" stroke-width="3"/>
+    <circle cx="137" cy="79" r="11" fill="url(#glass)" stroke="#9bece7" stroke-width="2"/><circle cx="183" cy="79" r="11" fill="url(#glass)" stroke="#9bece7" stroke-width="2"/>
+    <circle cx="134" cy="76" r="3" fill="#edfaff"/><circle cx="180" cy="76" r="3" fill="#edfaff"/>
+    <path d="M221 77h17v15h-17m-123-15H81v15h17" fill="url(#warm)" stroke="#365d87" stroke-width="3"/>
+  </symbol>
+
+  <symbol id="drone-frame" viewBox="0 0 320 200" preserveAspectRatio="none">
+    <path d="m144 81-66-41-19 2-5 15 64 46-66 38 4 18 18 4 71-39m32-43 65-42 19 3 5 15-65 47 67 37-4 18-18 4-70-39" fill="url(#dark)" stroke="#0c1c32" stroke-width="6" stroke-linejoin="round"/>
+    <path d="m144 78-66-41-19 2-5 15 64 46-66 38 4 18 18 4 71-39m32-43 65-42 19 3 5 15-65 47 67 37-4 18-18 4-70-39" fill="url(#metal)" stroke="#5c7794" stroke-width="2" stroke-linejoin="round"/>
+    <path d="m144 81-66-41-19 2-5 15 64 46-66 38 4 18 18 4 71-39m32-43 65-42 19 3 5 15-65 47 67 37-4 18-18 4-70-39" fill="url(#carbon)"/>
+    <g fill="#23394e" stroke="#9eafc1" stroke-width="2"><circle cx="65" cy="47" r="14"/><circle cx="251" cy="47" r="14"/><circle cx="65" cy="148" r="14"/><circle cx="252" cy="148" r="14"/></g>
+    <g fill="#8199ab" stroke="#172c42" stroke-width="1.5"><circle cx="65" cy="47" r="8"/><circle cx="251" cy="47" r="8"/><circle cx="65" cy="148" r="8"/><circle cx="252" cy="148" r="8"/></g>
+    <path d="M125 50q35-24 69 0l12 33-3 43-16 26h-53l-17-26-3-43z" fill="#223446" stroke="#b2c3d6" stroke-width="2"/>
+    <path d="M131 54q28-17 56 0l11 32-4 37-12 21h-43l-13-21-4-37z" fill="#101e31" stroke="#617f9c" stroke-width="1.3"/>
+    <path d="M139 56v65m43-65v65M129 90h62m-58 43h55m-53-56h53" stroke="#587c91" stroke-width="1.25" fill="none"/>
+    <path d="M138 137v18q22 15 44 0v-18" fill="none" stroke="#7893ac" stroke-width="4"/>
+    <path d="M148 66h25v49h-25z" fill="url(#carbon)" stroke="#7c91aa" stroke-width="1.3"/>
+    <path d="m137 67-17-12-39-7m105 15 20-7 33-8M135 113l-17 9-41 25m108-34 19 9 37 25" fill="none" stroke="#a17045" stroke-width="1.4"/>
+    <g fill="#e2e9ed" stroke="#364c61" stroke-width=".7"><circle cx="130" cy="65" r="2.9"/><circle cx="189" cy="65" r="2.9"/><circle cx="130" cy="121" r="2.9"/><circle cx="189" cy="121" r="2.9"/></g>
+  </symbol>
+
+  <symbol id="drone-shadow" viewBox="0 0 320 200"><ellipse cx="161" cy="161" rx="114" ry="16" fill="#101925" opacity=".39"/></symbol>
+  <symbol id="drone-flight-lights" viewBox="0 0 320 200"><path d="m86 57 7 5m134 0 7-5" stroke="#75f8b8" stroke-width="3" stroke-linecap="round"/><path d="m87 139 8-5m130 0 8 5" stroke="#ff8f73" stroke-width="3" stroke-linecap="round"/></symbol>
+
+  <path id="shape-power" d="M25 10Q22 7 16 6 6 3 2 6q-5 5 5 8l17 1q1 7 9 8 8 0 9-7l17 5q7 1 6-4-2-4-10-6L41 9q-3-5-8-5-5 0-8 6Z"/>
+  <g id="part-power">
+    <use xlink:href="#shape-power" fill="url(#graphite)" stroke="#9aa9b4" stroke-width=".8"/>
+    <path d="M3 7q7-2 22 4m16 0q18 2 22 8" fill="none" stroke="#7b8b99" stroke-width=".75"/>
+    <circle cx="33" cy="13" r="8" fill="url(#brushed)" stroke="#233140" stroke-width=".8"/>
+    <circle cx="33" cy="13" r="5" fill="url(#graphite)" stroke="#c1a382" stroke-dasharray="1 1"/><circle cx="33" cy="13" r="2.2" fill="#c5ccd2"/>
+  </g>
+
+  <path id="shape-gps" d="M3 1h24l2 3v12l-3 2H5l-4-3V4Z"/>
+  <g id="part-gps">
+    <use xlink:href="#shape-gps" fill="url(#circuit)" stroke="#719286" stroke-width=".7"/>
+    <path d="M6 3h16l3 3v8H6l-2-2V5Z" fill="#d8c7a8" stroke="#96836d" stroke-width=".75"/>
+    <path d="M8 5h13v7H8z" fill="#e6dcc9"/><path d="M9 6h10" stroke="#fff3d7"/><circle cx="26" cy="15" r="1" fill="#efc989"/>
+  </g>
+
+  <path id="shape-radio" d="m3 1 13 8h22l13-8 2 3-10 7v5l-2 2H13l-2-2v-5L1 4Z"/>
+  <g id="part-radio">
+    <use xlink:href="#shape-radio" fill="url(#graphite)" stroke="#788a9b" stroke-width=".7"/>
+    <path d="M15 11h24v5H15z" fill="#283c33" stroke="#606f73" stroke-width=".5"/><path d="M5 4l9 6m36-6-9 6" stroke="#9daab4" stroke-width=".6"/>
+    <circle cx="18" cy="13.5" r="1.3" fill="#96d8b0"/><path d="M31 12h5m-5 2h5" stroke="#b1bfcd" stroke-width=".5"/>
+  </g>
+
+  <path id="shape-control" d="M5 1h33l3 4h6v21h-6l-4 4H5l-4-4V5Z"/>
+  <g id="part-control">
+    <use xlink:href="#shape-control" fill="url(#circuit)" stroke="#7ba48c" stroke-width=".8"/>
+    <path d="M6 10h7l5 5h13l5-5h7M5 22h7l6-4h13l6 8h4M17 5v4m13 13v6" fill="none" stroke="#bca470" stroke-width=".65"/>
+    <rect x="17" y="9" width="15" height="14" rx="1" fill="url(#graphite)" stroke="#0e1a17" stroke-width=".7"/>
+    <path d="M18 8h14m-14 16h14" stroke="#ccd0ca" stroke-width="1.4" stroke-dasharray=".7 1"/>
+    <path d="M37 11h9v8h-9zm-33 3h5v5H4z" fill="#e3dacc" stroke="#68766d" stroke-width=".65"/>
+    <g fill="#17241d" stroke="#d3b677" stroke-width=".7"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="25" r="2"/><circle cx="38" cy="24" r="1.5"/></g>
+  </g>
+
+  <path id="shape-battery" d="M5 1h38l3 3v4h5v8h-5v4l-3 3H5l-4-4V5Z"/>
+  <g id="part-battery">
+    <use xlink:href="#shape-battery" fill="url(#graphite)" stroke="#7e929e" stroke-width=".8"/>
+    <path d="M5 5h37v14H5z" fill="#365454"/><path d="M6 4h35m-35 16h35" stroke="#b3bebb" stroke-width=".7"/>
+    <path d="M47 10h3m-3 3h3m-3 2h3" stroke="#d5a963" stroke-width=".85"/>
+    <path d="M10 8h9m-9 3h5m-5 3h9m14-7-4 6h4l-1 4 6-7h-5Z" stroke="#c5d5cc" fill="none" stroke-width=".8"/>
+  </g>
+
+  <path id="shape-camera" d="M5 1h30l4 5v10l-5 6h-8l-3 2h-6l-3-2H6l-5-6V6Z"/>
+  <g id="part-camera">
+    <use xlink:href="#shape-camera" fill="url(#graphite)" stroke="#91a4b1" stroke-width=".85"/>
+    <path d="M4 6v8l5 5h4m23-13v8l-5 5h-4" fill="none" stroke="#9aaebd" stroke-width="1.7"/>
+    <rect x="11" y="4" width="18" height="17" rx="3" fill="#25353e" stroke="#687b8a"/>
+    <circle cx="20" cy="12.4" r="6.6" fill="#0d1821" stroke="#b4c1ca" stroke-width=".8"/><circle cx="20" cy="12.4" r="4.6" fill="url(#glass)"/><ellipse cx="18.6" cy="10.6" rx="2" ry="1" fill="#e8ffff" opacity=".82"/>
+  </g>
+
+  <symbol id="pc-workbench" viewBox="0 0 320 200">
+    <path d="M12 33 23 20h155l18 13v128l-10 12H12Z" fill="url(#graphite)" stroke="#13212d" stroke-width="2.2"/>
+    <path d="M12 33h168l16-1m-16 1v137M21 31l8-6h143l8 6" fill="none" stroke="#85929d" stroke-width="1.1"/>
+    <path d="M18 39h154v124H18z" fill="#243441" stroke="#7c8e99" stroke-width="1.3"/>
+    <path d="M24 43h117v83H24z" fill="url(#circuit)" stroke="#779481" stroke-width="1.2"/>
+    <path d="M34 54h20l8 8m29-3 12-11h30m-35 17 10-9h7M33 95h12l10-10m43 5 9 9h10m-18 9 8 7h10m-72 7 8-10h38m-48 9 8-13h30m-53-24h18l8-9" fill="none" stroke="#ab9b6b" stroke-width=".65"/>
+    <path d="M53 58h41v45H53z" fill="url(#brushed)" stroke="#142b2e" stroke-width="1.2"/>
+    <circle cx="73" cy="80" r="16.5" fill="#0f1b23" stroke="#a6b6bd"/>
+    <path d="M29 51h11v12H29zm69 18h14v16H98z" fill="url(#graphite)" stroke="#687b77" stroke-width=".75"/>
+    <path d="M35 103h61v4H35zm0 8h54v4H35z" fill="#c9bfa9" stroke="#192d30" stroke-width=".7"/>
+    <path d="M102 114h14v6h-14zm18-68h16v6h-16zm17 12h3v56h-3z" fill="#c6c9c2" stroke="#25363c" stroke-width=".6"/>
+    <path d="M62 49h20m-49 20v13m69 10v8" stroke="#c8c4a5" stroke-width="2.8" stroke-linecap="round" stroke-dasharray=".3 3.4"/>
+    <path d="M21 129h79v35H21zM143 89h38v61h-38z" fill="url(#vents)" stroke="#8597a5" stroke-width="1.3"/>
+    <path d="M144 94v46m35-46v46M23 133h75m-75 28h75" stroke="#9cabb4" opacity=".56"/>
+    <path d="M182 47h11v102h-11z" fill="url(#brushed)" stroke="#4c6574" stroke-width=".7"/>
+    <path d="M183 61h9l-1 5h-7zM184 118h7v5h-7zm0 7h7v5h-7z" fill="#101b25" stroke="#222c35" stroke-width=".6"/>
+    <path d="M185 121h5m-5 6h5" stroke="#75a5ba" stroke-width=".7"/>
+    <path d="M183 72h9v24h-9zm0 24h9v12h-9zm0 42h9v8h-9z" fill="url(#vents)"/>
+    <path d="M17 166h166" stroke="#111c25" stroke-width="5"/><path d="M18 40h3m146 1h3m-152 123h3m145 0h3" stroke="#c3cbd0" stroke-width="1.7" stroke-linecap="round"/>
+    <circle cx="167" cy="35" r="3.2" fill="#1e2d39" stroke="#8c9ca6" stroke-width=".8"/><circle cx="157" cy="35" r="1.1" fill="#0e181c"/>
+  </symbol>
+  <symbol id="pc-fan" viewBox="0 0 320 200">
+    <g transform="translate(73 80)">
+      <circle r="15.6" fill="#17222a"/>
+      <path id="fan-vane" d="M1-4q1-8 8-8 5 5 3 6-4-2-9 4" fill="url(#brushed)" stroke="#b6c4c9" stroke-width=".35"/>
+      <use xlink:href="#fan-vane" transform="rotate(60)"/><use xlink:href="#fan-vane" transform="rotate(120)"/><use xlink:href="#fan-vane" transform="rotate(180)"/><use xlink:href="#fan-vane" transform="rotate(240)"/><use xlink:href="#fan-vane" transform="rotate(300)"/>
+      <circle r="4.5" fill="url(#graphite)" stroke="#83959c" stroke-width=".8"/>
+    </g>
+  </symbol>
+  <symbol id="pc-leds" viewBox="0 0 320 200"><circle cx="167" cy="35" r="2" fill="#9dffd1"/><circle cx="157" cy="35" r="1" fill="#ffe6a5"/></symbol>
+
+  <path id="shape-psu" d="M2 3h47l12 6v5h7v9h-7v5H2Z"/>
+  <g id="part-psu">
+    <use xlink:href="#shape-psu" fill="url(#graphite)" stroke="#8b9aa7" stroke-width=".85"/>
+    <path d="M4 4h45l11 5v4H4Z" fill="url(#brushed)" stroke="#53616b" stroke-width=".6"/>
+    <ellipse cx="28" cy="8" rx="14" ry="3" fill="#303d44" stroke="#92a3ab" stroke-width=".5"/>
+    <path d="M18 7h20m-22 2h24M6 16h15v8H6zm20 1h28v6H26z" fill="url(#vents)" stroke="#a3a9aa" stroke-width=".6"/>
+    <path d="M61 16h6v5h-6" fill="#1b242d" stroke="#929faa" stroke-width=".5"/>
+  </g>
+  <path id="shape-ram" d="M3 1h10v27h-3v4h3v28H3v-4H1V5h2Z"/>
+  <g id="part-ram">
+    <use xlink:href="#shape-ram" fill="url(#circuit)" stroke="#8fa891" stroke-width=".65"/>
+    <path d="M11 3v23m0 8v23" stroke="#dcbc71" stroke-width="2.7" stroke-dasharray=".7 .8"/>
+    <path d="M3 7h5v9H3zm0 12h5v8H3zm0 15h5v9H3zm0 12h5v9H3z" fill="#1d2529" stroke="#879198" stroke-width=".45"/>
+  </g>
+  <path id="shape-disk" d="M4 1h24l4 4v41l-4 4h-3v3H10v-3H5l-4-4V5Z"/>
+  <g id="part-disk">
+    <use xlink:href="#shape-disk" fill="url(#brushed)" stroke="#506573" stroke-width=".8"/>
+    <path d="M5 6h23v38H5z" fill="#c9d2db" stroke="#8695a0" stroke-width=".65"/>
+    <path d="M8 9h17v22H8z" fill="#e3e7ed"/><path d="M10 12h13m-13 3h9m-9 10h13m-13 2h13m-13 2h13" stroke="#748696" stroke-width=".6"/>
+    <path d="M11 49h13v3H11z" fill="#233129"/><path d="M12 51h10" stroke="#dcc07e" stroke-width="1.5" stroke-dasharray=".6 .6"/>
+    <path d="M4 4h1m23 0h1M4 47h1m23 0h1" stroke="#f0f3f6" stroke-width="1.6" stroke-linecap="round"/>
+  </g>
+
+  <path id="shape-screen" d="M5 1h96l4 4v52l-4 4H60v7h14l5 3v4H27v-4l5-3h14v-7H5l-4-4V5Z"/>
+  <g id="part-screen">
+    <use xlink:href="#shape-screen" fill="url(#graphite)" stroke="#8b9ca8" stroke-width=".8"/>
+    <path d="M5 5h96v50H5z" fill="#101a25" stroke="#080c10" stroke-width=".8"/><path d="M7 7h67L47 54H7z" fill="#465766" opacity=".24"/>
+    <path d="M32 70h42m-26-9h10" stroke="#9cabb5" stroke-width=".7"/><circle cx="96" cy="58" r="1.1" fill="#c29056"/>
+  </g>
+  <g id="display-start-screen">
+    <path d="M5 5h96v50H5z" fill="#0f1c2b"/><path d="M13 14h18v1H13zm0 4h24v1H13zm0 4h13v1H13z" fill="#839ba9"/>
+    <circle cx="96" cy="58" r="1.1" fill="#9effbd"/>
+  </g>
+  <g id="display-screen">
+    <path d="M5 5h96v50H5z" fill="url(#desktop-light)"/>
+    <path d="M5 41q27 4 44-17t52-12v43H5z" fill="#296987" opacity=".8"/><path d="M5 46q27 5 53-12t43-9v30H5z" fill="#143a68" opacity=".9"/>
+    <path d="M5 52h96v3H5z" fill="#10294b"/><path d="M48 53h10v1H48zM11 12h5l2 4h-7zm0 9h6v5h-6zm0 9h5l2 4h-7z" fill="#c6e5ee"/><circle cx="96" cy="58" r="1.1" fill="#9effbd"/>
+  </g>
+
+  <path id="shape-keyboard" d="M7 1h86l7 21v5l-3 1H4l-3-2v-4Z"/>
+  <g id="part-keyboard">
+    <use xlink:href="#shape-keyboard" fill="url(#graphite)" stroke="#8494a2" stroke-width=".8"/>
+    <path d="M9 4h81l6 17H5Z" fill="#667681" stroke="#9eaab0" stroke-width=".5"/>
+    <path d="M12 7h50m-51 4h52m-53 4h54m-55 4h14m29 0h13m6-12h18m-17 4h18m-18 4h19m-18 4h19" stroke="#202d38" stroke-width="2.6" stroke-dasharray="3.1 1.25"/>
+    <path d="M25 19h24" stroke="#202d38" stroke-width="2.6"/><path d="M6 25h89" stroke="#91a0ac" stroke-width=".5"/>
+  </g>
+  <symbol id="cable-psu" viewBox="0 0 320 200"><path d="M91 152c21 0 20-25 18-34" stroke="#101820" stroke-width="5" fill="none"/><path d="M92 152c18 0 20-26 17-34" stroke="#82735d" stroke-width="1.5" fill="none"/></symbol>
+  <symbol id="cable-disk" viewBox="0 0 320 200"><path d="M163 142v6c0 13-16 12-23 4-5-5-11-9-11-32" fill="none" stroke="#17242c" stroke-width="4"/><path d="M163 142v6c0 12-15 11-22 3-5-6-12-9-12-31" fill="none" stroke="#bc7053" stroke-width="1.65"/></symbol>
+  <symbol id="cable-screen" viewBox="0 0 320 200"><path d="M191 63c10 0 5 39 25 39h31" stroke="#131c25" stroke-width="2.5" fill="none"/><path d="m187 62 5-1v5l-5-1Z" fill="#223441" stroke="#a1aeb5" stroke-width=".5"/></symbol>
+  <symbol id="cable-keyboard" viewBox="0 0 320 200"><path d="M191 122c24 0 42-29 57-16q8 7 7 28" stroke="#131c25" stroke-width="2.4" fill="none"/><path d="M187 120h6v4h-6z" fill="#223441" stroke="#a1aeb5" stroke-width=".5"/></symbol>
+
+  <symbol id="computer-frame" viewBox="0 0 320 200" preserveAspectRatio="none">
+    <path d="M19 31 37 16h185l8 16v141l-16 10H19z" fill="#12273a" stroke="#839caf" stroke-width="2"/>
+    <rect x="26" y="30" width="191" height="140" rx="4" fill="#26394c" stroke="#6b8399" stroke-width="1"/>
+    <rect x="44" y="47" width="124" height="84" rx="4" fill="#21534f" stroke="#81ada7" stroke-width="1"/>
+    <path d="M55 56h28l14 10m50-10h-22l-14 11m-44 46 29-14m37 14-22-14m-14 24v-18m28 20v-19m19 17-15-19" fill="none" stroke="#8e9f62" stroke-width="1"/>
+    <rect x="85" y="66" width="37" height="36" rx="2" fill="#a8b2bc" stroke="#182b3d" stroke-width="2"/>
+    <rect x="91" y="71" width="25" height="26" rx="13" fill="#45586a" stroke="#4c6579" stroke-width="2"/>
+    <path d="M92 84h23m-11-12v24m-9-21 17 17m0-17L95 92" stroke="#849fab" stroke-width="1"/>
+    <path d="M135 59h3v45h-3zm6 0h3v45h-3zm6 0h3v45h-3z" fill="#adbbad" stroke="#182f41" stroke-width=".6"/>
+    <path d="M52 111h47v3H52zm3 6h37v3H55zm88 4h12v5h-12zm14 0h8v5h-8z" fill="#adc0b5"/>
+    <path d="M173 42h37v83h-37zM34 136h174v26H34z" fill="url(#vents)" stroke="#6a8297" stroke-width="1"/>
+    <path d="M171 58h40m-40 23h40m-40 23h40" stroke="#91a3b6" stroke-width="1"/>
+    <path d="M40 141h55v17H40z" fill="#152539" stroke="#647d92" stroke-width="1"/>
+    <path d="M89 143c8-12 46 2 65-18m-61 22c15-12 47 4 64-23" fill="none" stroke="#ab7251" stroke-width="1.2"/>
+    <rect x="248" y="38" width="52" height="125" rx="4" fill="#acb8c2" stroke="#182d48" stroke-width="2"/>
+    <rect x="254" y="45" width="39" height="27" rx="2" fill="url(#vents)" stroke="#627489"/>
+    <path d="M259 83h29l-2 9h-25zm0 33h28v8h-28zm0 13h28v8h-28z" fill="#24344b" stroke="#61798b" stroke-width="1"/>
+    <path d="M263 119h19m-19 13h19" stroke="#65aad3" stroke-width="1.2"/>
+    <circle cx="260" cy="151" r="3" fill="#527a63"/><circle cx="274" cy="151" r="3" fill="#936c87"/><circle cx="288" cy="151" r="3" fill="#577d9e"/>
+    <path d="M231 21v157" fill="none" stroke="#8fafc8" stroke-width=".7" stroke-dasharray="2 3"/>
+    <g fill="#c4d1d6"><circle cx="34" cy="37" r="2"/><circle cx="209" cy="37" r="2"/><circle cx="35" cy="165" r="2"/><circle cx="209" cy="165" r="2"/></g>
+  </symbol>
+
+  <symbol id="rotors-mounted" viewBox="0 0 320 200" preserveAspectRatio="none">
+    <use xlink:href="#rotor" transform="translate(65 47) rotate(-18) scale(.68)"/>
+    <use xlink:href="#rotor" transform="translate(251 47) rotate(15) scale(.68)"/>
+    <use xlink:href="#rotor" transform="translate(65 148) rotate(16) scale(.68)"/>
+    <use xlink:href="#rotor" transform="translate(252 148) rotate(-12) scale(.68)"/>
+  </symbol>
+
+  <symbol id="campus" viewBox="0 0 320 200" preserveAspectRatio="none">
+    <path d="M0 0h320v200H0z" fill="#dfedf6"/>
+    <path d="m0 122 56-39 14 5 47-39h116v93H0z" fill="#cfdee5"/>
+    <path d="m117 49 13-13h112v89l-9 17V49z" fill="#9db5c6"/>
+    <path d="m116 61 116-1v5H111zM97 78h136v4H92zM77 99h155v4H69z" fill="#f8faf7"/>
+    <path d="M137 68h27v8h-27zm38 0h20v8h-20zm30 0h18v8h-18zM107 85h24v10h-24zm35 0h22v10h-22zm33 0h20v10h-20zm30 0h18v10h-18zm-83 21h29v13h-29zm37 0h22v13h-22zm34 0h29v13h-29z" fill="#789eb3" opacity=".7"/>
+    <path d="M0 142h320v58H0z" fill="#8cab9e"/><path d="m0 169 170-28 48 0 102 21v38H0z" fill="#a6bec7"/>
+    <path d="m62 200 116-58m117 58-80-58m-82 47h141m-88-35h44" stroke="#e3ebeb" stroke-width="1" opacity=".75"/>
+    <path d="M37 146v-35m239 43v-41" stroke="#59766d" stroke-width="3"/><path d="M23 124q-12-13 14-28 31 14 14 30zm236 3q-11-13 17-26 23 12 15 26z" fill="#6f9b83"/>
+  </symbol>
+
+  <symbol id="robot-real" viewBox="0 0 320 200">
+    <ellipse cx="162" cy="171" rx="105" ry="14" fill="#234456" opacity=".32"/>
+    <path d="M196 58V28" stroke="#20364d" stroke-width="3" stroke-linecap="round"/>
+    <path d="M196 31V21" stroke="#83a2b9" stroke-width="1"/>
+    <path d="m83 130 128-15 32 11v34l-27 15-121 1-18-12v-25z" fill="#172b3c" stroke="#101e2e" stroke-width="2"/>
+    <path d="M91 139q12-11 32-1v25q-8 15-30 10l-9-9v-20zm103-3 25-6 20 9v21l-22 13-24-4z" fill="url(#dark)" stroke="#172d41" stroke-width="2"/>
+    <path d="M87 149h32m-31 5h31m-28 5h28m91-18 25 4m-25 2 25 4m-26 2 24 4" stroke="#8193a3" stroke-width="1.8"/>
+    <path d="m90 104 29-32 63-13 39 11 15 44-3 20-31 18-83 2-32-17z" fill="url(#metal)" stroke="#385c7b" stroke-width="2.6"/>
+    <path d="m182 61 39 9 15 44-3 20-31 18 5-48z" fill="#8faabe" stroke="#436681" stroke-width="1.5"/>
+    <path d="m99 103 14-17 65-10 18 19-3 31-75 3-22-8z" fill="url(#dark)" stroke="#829fb9" stroke-width="2"/>
+    <circle cx="129" cy="103" r="12" fill="url(#glass)" stroke="#a9cdde" stroke-width="2"/><circle cx="165" cy="99" r="12" fill="url(#glass)" stroke="#a9cdde" stroke-width="2"/>
+    <path d="m124 99 7-3m30-1 7-3" stroke="#f8ffff" stroke-width="2" stroke-linecap="round"/>
+    <path d="m211 90 13 12 4 12-17 6zm-82 47 31-1 26-7v9l-54 5z" fill="url(#vents)" stroke="#4b6a84" stroke-width=".8"/>
+    <path d="m145 71 4-20 24-5 14 8v14l-22 6z" fill="url(#warm)" stroke="#875422" stroke-width="1.8"/><path d="m151 53 18-4 10 6-18 5z" fill="#ffe894"/>
+    <path d="m97 128 13 7m77 3 11-4m20-52 4 8" fill="none" stroke="#fff4af" stroke-width="3" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="campus-hall" viewBox="0 0 320 200" preserveAspectRatio="none">
+    <path d="M0 0h320v200H0z" fill="#c6d4d9"/><path d="m0 200 114-66h111l95 66z" fill="#9ca9ab"/>
+    <path d="m0 0 114 49v85L0 200zm320 0-95 49v85l95 66z" fill="#e2e9e6"/><path d="M114 49h111v85H114z" fill="#9fb4be"/>
+    <path d="M141 56h58v80h-58z" fill="#7e99a5"/><path d="M146 62h23v45h-23zm25 0h23v45h-23z" fill="#bbd4df"/>
+    <path d="m13 40 38 13v106l-38 19zm51 16 28 9v69l-28 16zm236-14-48 12v73l48 24z" fill="#7895a1"/>
+    <path d="m253 58 41-11v67l-41-4zm-48-20h-65l-11-6h91zM100 17h127l-14 9H115z" fill="#f6faf9"/>
+    <path d="m46 183 209 0m-186-14h165m-128-19h105m-87-16-40 66m117-66 39 66" fill="none" stroke="#dce7e7" stroke-width="1"/>
+  </symbol>
+
+  <symbol id="campus-playground" viewBox="0 0 320 200" preserveAspectRatio="none">
+    <path d="M0 0h320v200H0z" fill="#dcecf4"/><path d="M0 90h320v38H0z" fill="#a4bcab"/>
+    <path d="m8 95 15-19 39-5 22 12 41-10 10 10 46-10 36 13 30-18 38 13 35-7v23z" fill="#7eaa90"/>
+    <path d="M0 110q97-30 320 11v79H0z" fill="#8daf9a"/><path d="M0 146q102-49 320 4v50H0z" fill="#c69b83"/>
+    <path d="M0 158q102-49 320 4M0 169q102-49 320 4M0 183q102-49 320 4" fill="none" stroke="#f4e6d8" stroke-width="1.2"/>
+    <path d="M230 124V67h42v54m-38-49h33v48h-33z" fill="none" stroke="#eef6fa" stroke-width="2"/><path d="M237 77v42m6-42v42m6-42v42m6-42v42m6-42v42m-25-34h28m-28 10h28m-28 10h28" stroke="#d2e2e4" stroke-width=".6"/>
+  </symbol>
+
+  <symbol id="track-drive" viewBox="0 0 320 200">
+    <path d="m61 71 183-14 19 20-12 54-24 27-158 9-20-23-1-45z" fill="url(#dark)" stroke="#192e44" stroke-width="4"/>
+    <path d="M89 86 214 76q27 2 31 29-1 25-24 33l-132 10q-26 1-33-26 0-27 33-36z" fill="url(#vents)" stroke="#879db2" stroke-width="4"/>
+    <g fill="url(#metal)" stroke="#506c84" stroke-width="3"><circle cx="91" cy="116" r="21"/><circle cx="140" cy="112" r="18"/><circle cx="182" cy="109" r="18"/><circle cx="218" cy="106" r="19"/></g>
+    <path d="M63 79 233 65m-172 87 170-12" stroke="#91a8bd" stroke-width="3" stroke-dasharray="5 5"/>
+  </symbol>
+
+  <symbol id="infrared" viewBox="0 0 320 200">
+    <path d="M66 60h188v83H66z" fill="url(#teal)" stroke="#2f5e67" stroke-width="4"/><path d="M87 69h145v60H87z" fill="url(#dark)" stroke="#688698" stroke-width="3"/>
+    <g fill="url(#glass)" stroke="#aac4d7" stroke-width="4"><ellipse cx="128" cy="99" rx="21" ry="20"/><ellipse cx="195" cy="99" rx="21" ry="20"/></g>
+    <path d="M113 142v24m15-24v24m15-24v24m15-24v24" stroke="#c4ad74" stroke-width="5"/><circle cx="76" cy="130" r="5" fill="#fac565"/><circle cx="243" cy="130" r="5" fill="#fac565"/>
+  </symbol>
+
+  <symbol id="beacon" viewBox="0 0 320 200">
+    <path d="M104 137V85a56 52 0 0 1 112 0v52z" fill="url(#warm)" stroke="#9a642c" stroke-width="4"/><path d="M128 87q2-24 22-33m35 21v47m-13-54v57" fill="none" stroke="#fff1be" stroke-width="5" stroke-linecap="round"/>
+    <path d="M94 126h132v28H94z" fill="url(#dark)" stroke="#38536c" stroke-width="4"/><path d="m82 57-15-9m170 9 15-9m-169 38H64m172 0h19" stroke="#c98e38" stroke-width="4" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="alarm-button" viewBox="0 0 320 200">
+    <path d="m80 88 54-49h72l35 38v57l-45 29h-81l-35-26z" fill="url(#metal)" stroke="#496986" stroke-width="4"/>
+    <ellipse cx="157" cy="95" rx="54" ry="32" fill="#192f49"/><ellipse cx="157" cy="91" rx="43" ry="26" fill="#b83f38" stroke="#762b29" stroke-width="3"/><path d="M134 86q13-10 36-8" stroke="#ffb6a6" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <circle cx="103" cy="110" r="4" fill="#607b94"/><circle cx="210" cy="103" r="4" fill="#607b94"/>
+  </symbol>
+  <use xlink:href="#brand" width="320" height="200"/>
+</svg>

@@ -1,0 +1,8 @@
+**
+!go.mod
+!*.go
+!package.json
+!scripts/
+!scripts/build.cjs
+!web/
+!web/**
