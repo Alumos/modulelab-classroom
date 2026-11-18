@@ -3,7 +3,7 @@ services:
     image: ghcr.io/alumos/modulelab-classroom:latest
     restart: unless-stopped
     environment:
-      TEACHER_PASSWORD: ${TEACHER_PASSWORD:?Set TEACHER_PASSWORD in the 1Panel environment file}
+      TEACHER_PASSWORD: "2026"
       COOKIE_SECURE: "true"
     ports:
       - "127.0.0.1:18326:8080"

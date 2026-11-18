@@ -25,9 +25,9 @@
 向 GitHub 仓库的 `main` 分支推送代码后，Actions 会在 x64 运行器上原生构建并发布 `ghcr.io/alumos/modulelab-classroom` 的 `linux/amd64` 镜像，不使用 QEMU。`latest` 指向最近成功发布的版本，`sha-<提交哈希>` 可用于锁定版本。先等待 Actions 显示成功，再部署。
 
 1. 首次发布时，GHCR 包和 GitHub 仓库的可见性独立。公开 GHCR 包后，1Panel 可以匿名拉取，不需要 GitHub 账号或令牌。如果包还是私有，仓库管理员需先在包的设置中设为公开，或在 VPS 上配置只读拉取凭据。
-2. 在 1Panel 新建编排，将 [`compose.1panel.yaml`](compose.1panel.yaml) 完整粘贴到 Compose 内容。在同一编排的 `.env` 或环境变量设置里添加 `TEACHER_PASSWORD=你的随机口令`（16–256 字节，推荐 48 位随机十六进制字符串），再启动。这个入口只拉镜像，不需要上传源码，也不用填 GHCR 凭据到 `.env`。
+2. 在 1Panel 新建编排，将 [`compose.1panel.yaml`](compose.1panel.yaml) 完整粘贴到 Compose 内容，再启动。教师口令直接写在编排内，示例值为 `"2026"`，不需要额外的 `.env`。这是公开的弱口令：若保留它，请通过可信网络或反代访问控制限制 `/teacher` 和 `/api/teacher/*`，学生首页不受限；开放教师端到公网时请改用 16–256 字节随机口令，不要把真实口令提交到仓库。
 3. 用 1Panel 的网站反向代理将 HTTPS 域名转发到 `http://127.0.0.1:18326`，前提是反代运行在宿主机网络；如果反代运行在独立容器网络，改用同一 Docker 网络下的服务名和容器端口 `8080`。学生打开域名根路径，教师打开同一域名的 `/teacher`。如果启用 CDN，按下面的缓存规则配置。
-4. 更新时在同一个编排里拉取新镜像并重建；命令行等效操作是 `docker compose pull && docker compose up -d`。保留编排名称和 `classroom_data` 卷，避免课件启动后读到空卷。
+4. 更新时在同一个编排里拉取新镜像并重建；命令行等效操作是 `docker compose pull && docker compose up -d`。保留编排名称和 `classroom_data` 卷，避免课件启动后读到空卷。师生页面页脚均有备案号链接。
 
 如果不用面板的镜像仓库配置，可在 VPS 上执行 `docker login ghcr.io -u 你的GitHub账号`，在密码提示中输入 PAT；不要把凭据放进命令行参数。若国内 VPS 无法访问 GHCR，先确认该服务器的合法拉取渠道，或把镜像按相同架构同步到自己的镜像仓库，再替换 Compose 的 `image` 地址。
 

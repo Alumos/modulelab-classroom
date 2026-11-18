@@ -41,6 +41,19 @@ func testAnswer(values []string, text string) any {
 	return map[string]any{"values": values, "text": text}
 }
 
+func TestSiteFilingFooter(t *testing.T) {
+	app, err := newServer(t.TempDir(), "2026", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, page := range []string{"/", "/teacher", "/teacher/"} {
+		response := exercise(t, app, "GET", page, nil, nil, 200)
+		if !strings.Contains(response.Body.String(), `<a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">苏ICP备2021038338号-1</a>`) {
+			t.Errorf("%s is missing the filing link", page)
+		}
+	}
+}
+
 func TestClassroomJourney(t *testing.T) {
 	password := token(24)
 	dataDir := t.TempDir()

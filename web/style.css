@@ -1,7 +1,10 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { background: #eff4ff; color: #152955; font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif; }
-body { margin: 0; font-size: 18px; line-height: 1.55; }
+body { display: flex; flex-direction: column; min-height: 100vh; margin: 0; font-size: 18px; line-height: 1.55; }
+#app { flex: 1 0 auto; }
+.site-footer { padding: 16px; text-align: center; color: #495c83; font-size: 14px; }
+.site-footer a { display: inline-block; padding: 5px 8px; text-decoration: underline; }
 h1, h2, h3, p, ol { margin: 0; }
 ol { padding: 0; list-style: none; }
 h1 { font-size: 48px; line-height: 1.14; font-weight: 900; letter-spacing: -.04em; }
