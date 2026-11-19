@@ -15,6 +15,7 @@
   var content = null;
   var drafts = {};
   var clock;
+  var flightStarted;
   var refreshTimer;
   var roomSwitch = false;
   var generation = 0;
@@ -373,10 +374,11 @@
     keyboard: {size: [101, 29], positions: [[205, 129]], seat: 'USB 键盘接驳位'}
   };
 
-  function benchArt(part, variant) {
+  function benchArt(part, variant, spinning) {
     var size = fittings[part].size;
-    return '<svg class="bench-art bench-' + variant + '" viewBox="0 0 ' + size.join(' ') + '" aria-hidden="true" focusable="false"' +
-      '><use xlink:href="/art.svg?v=5#' + variant + '-' + part + '" width="' + size[0] + '" height="' + size[1] + '"></use></svg>';
+    return '<svg class="bench-art bench-' + variant + '" viewBox="0 0 ' + size.join(' ') + '" aria-hidden="true" focusable="false">' +
+      (spinning ? '<g class="flight-blades">' : '') + '<use xlink:href="/art.svg?v=5#' + variant + '-' + part + '" width="' + size[0] + '" height="' + size[1] + '"></use>' +
+      (spinning ? '</g>' : '') + '</svg>';
   }
 
   function stageOne() {
@@ -386,7 +388,7 @@
       '<div class="assembly-board drone-board' + (saved.playing ? ' flying' : '') + '"><div class="bench-layer bench-shadow">' + svg('drone-shadow', 'assembly-art') + '</div>' +
       '<div class="bench-device">' + svg('drone-frame', 'assembly-art') + (saved.playing ? '<div class="bench-layer flight-lights">' + svg('drone-flight-lights', 'assembly-art') + '</div>' : '') +
       content.items.map(function (item) { return sockets(item, item.id, has(item.id)); }).join('') + '</div></div>' +
-      assemblyReadout(active, saved.playing ? '螺旋桨转动，正在试飞' : saved.flight ? '试飞完成' : '等待安装', saved.values.length, 6,
+      assemblyReadout(active, saved.playing ? '螺旋桨加速' : saved.flight ? '试飞完成' : '等待安装', saved.values.length, 6,
       btn(saved.playing ? '飞行中…' : saved.flight ? '再次试飞' : '开始试飞', 'fly', 'button primary', 'id="fly"' + (saved.playing ? ' disabled' : '')) +
       btn('重新装配', 'reset', 'button secondary', 'id="reset"' + (saved.playing ? ' disabled' : '')));
   }
@@ -407,10 +409,10 @@
     var snapping = mounted && saved.focus === part && !saved.wrong && saved.notice === 'mounted';
     return fit.positions.map(function (point, index) {
       var label = (mounted ? item.name + '已装好' : fit.seat + '：空槽') + (index ? ' ' + (index + 1) : '');
-      var drawing = benchArt(part, mounted ? 'part' : 'shape');
+      var drawing = benchArt(part, mounted ? 'part' : 'shape', mounted && part === 'power' && saved.playing);
       if (mounted && part === 'screen' && saved.on) drawing += (saved.playing ? '<span class="bench-layer boot-splash">' + benchArt(part, 'display-start') + '</span>' : '') +
         '<span class="bench-layer boot-desktop">' + benchArt(part, 'display') + '</span>';
-      if (mounted && part === 'power') drawing = '<span class="bench-layer rotor-spin' + (index === 1 || index === 2 ? ' reverse' : '') + '">' + drawing + '</span>';
+      if (mounted && part === 'power') drawing = '<span class="bench-layer rotor-spin">' + drawing + '</span>';
       if (mounted) drawing = '<span class="bench-layer mounted-part">' + drawing + '</span>';
       return btn(drawing, 'drop', 'bench-socket fitting-' + part + (mounted ? ' occupied' : '') + (snapping ? ' snapping' : ''),
         'id="slot-' + target + (index ? '-' + index : '') + '" ' + attr('drop', target) + ' ' + attr('fit', part) + ' ' + attr('mount-index', index) +
@@ -679,6 +681,10 @@
     id('stage').innerHTML = title(stage) + activities[stage]() + '<div class="stage-footer">' + btn(state.done[stage] ? '更新记录' : '提交记录', 'submit-stage', 'button primary',
       'id="submit-stage"' + (submitting || (stage === 1 && !draft().reveal) || draft().playing ? ' disabled' : '')) + feedback() + '</div>';
     if (stage === 0 || stage === 4) fitBoard(id('stage'));
+    if (stage === 0 && draft().playing) {
+      var flying = draft();
+      animateFlight(id('stage'), flightStarted, function () { flying.playing = false; flying.flight = true; renderStage('fly'); });
+    }
     if (focus && id(focus) && !id(focus).disabled && document.activeElement !== id(focus)) id(focus).focus();
     if (stage === 2) drawWires();
     if (stage === 3) syncLightPreview(draft(), content.calls);
@@ -722,8 +728,60 @@
     saved.focus = '';
     saved.notice = '';
     saved.wrong = false;
+    flightStarted = flightNow();
     renderStage();
-    clock = setTimeout(function () { saved.playing = false; saved.flight = true; renderStage('fly'); }, 4600);
+  }
+
+  var flightPath = [
+    [0, 0, 0, 0], [.13, 0, 0, 0], [.36, -1.5, -9, -2.5], [.59, 1.8, -11, 2.8],
+    [.76, .4, -8.5, -1.3], [.96, 0, 0, 0], [1, 0, 0, 0]
+  ];
+
+  function flightNow() { return window.performance && window.performance.now ? window.performance.now() : Date.now(); }
+
+  function animateFlight(panel, started, finished) {
+    var board = panel.querySelector('.drone-board.flying');
+    if (!board) return;
+    var craft = board.querySelector('.bench-device');
+    var shadow = board.querySelector('.bench-shadow');
+    var lights = board.querySelector('.flight-lights');
+    var rotors = board.querySelectorAll('.flight-blades');
+    var readout = panel.querySelector('.effect-bubble strong');
+    var gentle = reducedMotion && reducedMotion.matches && !fullMotion;
+    var nextFrame = window.requestAnimationFrame ? function (callback) { window.requestAnimationFrame(callback); } : function (callback) { setTimeout(callback, 16); };
+    if (typeof started !== 'number') started = flightNow();
+    var segment = 1;
+    var phase = '';
+
+    function draw() {
+      if (!document.documentElement.contains(board)) return;
+      var progress = Math.max(0, Math.min((flightNow() - started) / 4600, 1));
+      while (progress > flightPath[segment][0]) segment++;
+      var before = flightPath[segment - 1];
+      var after = flightPath[segment];
+      var blend = (progress - before[0]) / (after[0] - before[0]);
+      blend = blend * blend * (3 - 2 * blend);
+      var lift = before[2] + (after[2] - before[2]) * blend;
+      craft.style.top = (lift * (gentle ? .50 : 1)).toFixed(2) + '%';
+      if (!gentle) {
+        craft.style.left = (before[1] + (after[1] - before[1]) * blend).toFixed(2) + '%';
+        craft.style.transform = 'rotate(' + (before[3] + (after[3] - before[3]) * blend).toFixed(2) + 'deg)';
+        shadow.style.transform = 'scale(' + (1 - lift * .014).toFixed(3) + ',' + (1 + lift * .017).toFixed(3) + ')';
+        lights.style.opacity = (0.68 + 0.32 * Math.cos(progress * 30)).toFixed(2);
+      }
+      shadow.style.opacity = (1 + lift * (gentle ? .02 : .045)).toFixed(2);
+      var spin = progress < .16 ? progress * progress / .32 : progress < .82 ? progress - .08 : .83 - (1 - progress) * (1 - progress) / .36;
+      var angle = spin / .83 * (gentle ? 2 : 26) * 360 % 360;
+      for (var index = 0; index < rotors.length; index++) {
+        rotors[index].setAttribute('transform', 'rotate(' + (index === 1 || index === 2 ? -angle : angle).toFixed(1) + ' 33 13)');
+      }
+      var label = progress < .13 ? '螺旋桨加速' : progress < .36 ? '正在起飞' : progress < .76 ? '空中悬停' : progress < .96 ? '正在降落' : '安全着陆';
+      if (label !== phase) { readout.textContent = label; phase = label; }
+      if (progress < 1) nextFrame(draw);
+      else if (finished) finished();
+    }
+
+    nextFrame(draw);
   }
 
   function runLights() {
@@ -1161,6 +1219,7 @@
     if (index === 0 || index === 4) fitBoard(panel);
     var controls = panel.querySelectorAll('button, textarea, select');
     Array.prototype.forEach.call(controls, function (control) { control.disabled = true; control.removeAttribute('draggable'); });
+    if (index === 0 && incoming.playing) animateFlight(panel);
     if (index === 2) drawWires();
     if (isLights) syncLightPreview(incoming, content.calls);
     if (previousDraft) drafts[index] = previousDraft;

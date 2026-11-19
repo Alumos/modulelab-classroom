@@ -402,11 +402,7 @@ input::placeholder, textarea::placeholder { color: #5d6c8a; opacity: 1; }
 .fitting-ram.snapping .mounted-part, .fitting-battery.snapping .mounted-part { animation-name: slide-contact; }
 .fitting-power { z-index: 2; }
 .fitting-power.snapping .rotor-spin { animation: spin .22s linear 4; }
-.flying .bench-device { animation: flight-lift 4.6s ease-in-out both; }
-.flying .bench-shadow { transform-origin: 50% 80%; animation: flight-shadow 4.6s ease-in-out both; }
-.flying .rotor-spin { animation: rotor-run 4.6s linear both; }
-.flying .rotor-spin.reverse { animation-direction: reverse; }
-.flying .flight-lights { animation: led-pulse 1.1s ease-in-out infinite alternate; }
+.flying .bench-shadow { transform-origin: 50% 80%; }
 .cpu-fan { left: 17.8125%; top: 32%; width: 10%; height: 16%; }
 .booted .cpu-fan { animation: spin .55s linear infinite; }
 .starting .boot-desktop { animation: screen-desktop 1.65s linear both; }
@@ -434,10 +430,6 @@ input::placeholder, textarea::placeholder { color: #5d6c8a; opacity: 1; }
 @keyframes slide-contact { from { transform: translateX(-22%); } 78% { transform: translateX(2%); } to { transform: none; } }
 @keyframes gimbal-check { from { transform: translateY(-13%) rotate(-12deg); } 60% { transform: rotate(7deg); } to { transform: none; } }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes rotor-run { 0% { transform: rotate(0); } 15% { transform: rotate(2turn); } 85% { transform: rotate(24turn); } 100% { transform: rotate(26turn); } }
-@keyframes flight-lift { 0%, 12%, 100% { transform: none; } 37% { transform: translate(-1%, -8%) rotate(-2deg); } 59% { transform: translate(2%, -10%) rotate(3deg); } 79% { transform: translateY(-6%) rotate(-1deg); } }
-@keyframes flight-shadow { 0%, 12%, 100% { opacity: 1; } 58% { opacity: .48; transform: scale(1.16, .83); } }
-@keyframes led-pulse { from { opacity: .38; } to { opacity: 1; } }
 @keyframes screen-wake { from { opacity: 0; } to { opacity: 1; } }
 @keyframes screen-desktop { 0%, 82% { opacity: 0; } 100% { opacity: 1; } }
 @keyframes bubble-rise { from { opacity: .3; transform: translateY(5px) scale(.98); } to { opacity: 1; transform: none; } }
