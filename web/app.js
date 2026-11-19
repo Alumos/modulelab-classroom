@@ -471,8 +471,7 @@
       '<section class="module-sheet"><div class="sheet-head"><h3>模块说明卡</h3><b>' + saved.values.length + ' / ' + project.pairs.length + '</b></div>' +
       '<dl>' + project.pairs.map(function (item) {
         return has(item.id) ? '<div class="sheet-entry"><dt>' + esc(item.name) + '</dt><dd>' + esc(item.info) + '</dd></div>' : '';
-      }).join('') + '</dl>' + (saved.values.length === project.pairs.length ? '<p>这些模块各有一项功能；' +
-        esc(project.modules.filter(function (item) { return !has(item.id); })[0].name) + '只是产品的一部分，不是独立的功能模块。</p>' : '') + '</section>' +
+      }).join('') + '</dl></section>' +
       textField('小组发现（选填）', saved.text, '这些模块如何配合？'));
   }
 
@@ -728,7 +727,7 @@
       '<div class="retrofit-kit">' + content.modules.map(function (info) {
         var installed = active === info;
         var tried = has(info.id);
-        return btn(svg(info.art) + '<strong>' + esc(info.name) + '</strong><span class="retrofit-task">' + esc(info.task) + '</span>' +
+        return btn(svg(info.art) + '<strong>' + esc(info.name) + '</strong>' +
           (tried ? '<span class="retrofit-mark" aria-label="' + (installed ? '已加装' : '已体验') + '">✓</span>' : ''),
           'retrofit-install', 'retrofit-option' + (installed ? ' installed' : ''), 'id="kit-' + info.id + '" ' + attr('value', info.id) + pressed(installed));
       }).join('') + '</div></section></div>';

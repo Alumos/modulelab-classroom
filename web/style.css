@@ -453,7 +453,6 @@ input::placeholder, textarea::placeholder { color: #5d6c8a; opacity: 1; }
 .sheet-entry:first-child { margin-top: 6px; }
 .sheet-entry dt { font-weight: 800; margin-right: 13px; }
 .sheet-entry dd { margin: 0; }
-.module-sheet p { margin-top: 5px; color: #655126; }
 
 .retrofit-studio { display: flex; align-items: flex-start; margin: 0 -8px 16px; }
 .retrofit-workbench, .retrofit-tools { min-width: 0; margin: 0 8px; }
@@ -473,9 +472,7 @@ input::placeholder, textarea::placeholder { color: #5d6c8a; opacity: 1; }
 .retrofit-kit { display: flex; flex-wrap: wrap; margin: -4px; }
 .retrofit-option { position: relative; flex: 0 0 calc(33.333% - 8px); min-width: 0; margin: 4px; padding: 4px 3px 9px; text-align: center; border: 2px solid #d7e3ed; border-radius: 14px; background: linear-gradient(#eaf2f6 0%, #f9fbfe 68%); color: #1c324f; }
 .retrofit-option .art { width: 100%; height: 69px; max-width: 123px; margin: 0 auto; }
-.retrofit-option strong, .retrofit-task { display: block; }
-.retrofit-option strong { font-size: 18px; line-height: 1.22; }
-.retrofit-task { color: #3d5770; font-size: 16px; line-height: 1.22; margin-top: 3px; }
+.retrofit-option strong { display: block; font-size: 18px; line-height: 1.22; }
 .retrofit-option:not(:disabled):hover { border-color: #77a4bb; }
 .retrofit-option.installed, .retrofit-option.installed:not(:disabled):hover { border-color: #168677; background: linear-gradient(#d0eee4, #f2fbf9 68%); }
 .retrofit-mark { position: absolute; top: 4px; right: 4px; min-width: 19px; text-align: center; border-radius: 50%; color: #166751; background: #dcf4e9; font-size: 14px; font-weight: 800; }
@@ -527,7 +524,7 @@ input::placeholder, textarea::placeholder { color: #5d6c8a; opacity: 1; }
   .match-board { padding: 9px; }
   .match-list { width: 42%; }
   .match-end { font-size: 16px; min-height: 57px; }
-  .retrofit-option strong, .retrofit-task { font-size: 15px; }
+  .retrofit-option strong { font-size: 15px; }
   .retrofit-bubble { padding: 8px 10px; }
   .retrofit-bubble strong { font-size: 19px; }
   .retrofit-bubble p { font-size: 16px; }
