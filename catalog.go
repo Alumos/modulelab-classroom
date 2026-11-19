@@ -19,7 +19,9 @@ type project struct {
 	Modules []item `json:"modules"`
 }
 
-var stageNames = [stageCount]string{"拆解无人机", "生活搜寻", "小组研究", "彩灯编程", "电脑组装", "校园安全卫士"}
+const legacyStageSix = "校园安全卫士"
+
+var stageNames = [stageCount]string{"拆解无人机", "生活搜寻", "小组研究", "彩灯编程", "电脑组装", "无人机改装"}
 
 var drone = []item{
 	{"power", "动力模块", "电机带动螺旋桨，产生升力，也能改变飞行方向。", "propeller"},
@@ -101,6 +103,43 @@ var parts = []item{
 
 var wiring = []string{"psu", "ram", "disk", "screen", "keyboard"}
 
+type retrofitModule struct {
+	item
+	Task string `json:"task"`
+}
+
+var retrofitModules = []retrofitModule{
+	{item{"wash", "清洗喷头", "喷头把水喷到外墙玻璃上，带走尘土。", "kit-wash"}, "高空洗窗"},
+	{item{"grab", "抓取机械爪", "机械爪合拢夹住垃圾，把它提离山坡。", "kit-grab"}, "高山拾垃圾"},
+	{item{"led", "彩灯灯条", "一排灯珠按顺序变色，组成彩灯表演。", "kit-led"}, "彩灯表演"},
+	{item{"cargo", "运输挂钩", "挂钩连着吊带，能吊运茶叶和筐装农产品。", "kit-cargo"}, "运送茶叶"},
+	{item{"mist", "植保喷洒器", "两侧喷头喷出细雾，覆盖下方的一片作物。", "kit-mist"}, "农田喷洒"},
+	{item{"horn", "喊话喇叭", "喇叭放大语音，把提醒传给远处的人。", "kit-horn"}, "远程喊话"},
+	{item{"drop", "物资投放舱", "舱门打开，食物包落到指定的接收区。", "kit-drop"}, "投放食物"},
+	{item{"thermal", "热成像相机", "相机把温度差变成颜色，帮助找出夜间需要救援的人。", "kit-thermal"}, "夜间搜救"},
+	{item{"beam", "探照灯", "探照灯把光集中到地面，让昏暗的道路清楚起来。", "kit-beam"}, "夜间照明"},
+}
+
+func isRetrofit(id string) bool {
+	for _, module := range retrofitModules {
+		if module.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+func legacyRetrofitAnswer(idx int, values []string) bool {
+	return idx == 5 && len(values) > 0 && find(jobs, values[0]).ID != ""
+}
+
+func currentAnswer(idx int, answer *submission) *submission {
+	if answer != nil && !legacyRetrofitAnswer(idx, answer.Values) {
+		return answer
+	}
+	return nil
+}
+
 var jobs = []item{
 	{"hall", "走廊巡逻", "在走廊发现障碍物，并提醒同学慢走。", ""},
 	{"gate", "校门引导", "放学时提示排队，必要时通知值班老师。", ""},
@@ -136,7 +175,7 @@ var catalog = [stageCount]any{
 	map[string]any{"projects": matchingProjects()},
 	map[string]any{"colors": colors, "calls": lightPhases},
 	map[string]any{"ports": ports, "parts": parts},
-	map[string]any{"jobs": jobs, "modules": robotModules},
+	map[string]any{"modules": retrofitModules},
 }
 
 func find(items []item, id string) item {
@@ -218,11 +257,11 @@ func validate(idx int, values []string, text string) string {
 			return "还有接口没有接对，检查后再开机。"
 		}
 	case 5:
-		if len(values) < 3 || !unique(values) || find(jobs, values[0]).ID == "" || text == "" {
-			return "请选择一个岗位和至少两个模块，再说明它们如何配合。"
+		if len(values) == 0 || !unique(values) {
+			return "请先加装至少一个模块。"
 		}
-		for _, value := range values[1:] {
-			if find(robotModules, value).ID == "" {
+		for _, value := range values {
+			if !isRetrofit(value) {
 				return "请从清单选择模块。"
 			}
 		}
@@ -274,9 +313,18 @@ func displayValues(idx int, values []string) []string {
 				label = find(parts, value).Name + " → " + ports[pos].Name
 			}
 		case 5:
-			label = find(jobs, value).Name
-			if pos > 0 {
-				label = find(robotModules, value).Name
+			if legacyRetrofitAnswer(idx, values) {
+				label = find(jobs, value).Name
+				if pos > 0 {
+					label = find(robotModules, value).Name
+				}
+			} else {
+				for _, module := range retrofitModules {
+					if module.ID == value {
+						label = module.Name + " · " + module.Task
+						break
+					}
+				}
 			}
 		}
 		if label != "" {

@@ -105,7 +105,7 @@ func TestClassroomJourney(t *testing.T) {
 		testAnswer([]string{"chair", "heat", "massage", "music"}, "模块可分别检测。"),
 		testAnswer([]string{"amber", "call-1", "call-2", "call-3"}, "只换一次，三处都变了。"),
 		testAnswer([]string{"psu", "ram", "disk", "screen", "keyboard"}, ""),
-		testAnswer([]string{"hall", "drive", "avoid", "voice"}, "=避障后让行走模块停止。"),
+		testAnswer([]string{"wash", "cargo", "thermal"}, "=换上不同模块，能做不同的事。"),
 	}
 	for idx, answer := range answers {
 		path := "/activity/" + string(rune('1'+idx))
@@ -121,7 +121,7 @@ func TestClassroomJourney(t *testing.T) {
 		t.Fatalf("incorrect totals: %s", dashboard.Body.String())
 	}
 	export := exercise(t, app, "GET", teacherRoom+"/export", nil, teacher, 200)
-	if !strings.Contains(export.Body.String(), "校园安全卫士") || !strings.Contains(export.Body.String(), "'=避障") {
+	if !strings.Contains(export.Body.String(), "无人机改装") || !strings.Contains(export.Body.String(), "运输挂钩 · 运送茶叶") || !strings.Contains(export.Body.String(), "'=换上") {
 		t.Fatal("CSV missing activity or escaped cell")
 	}
 	exercise(t, app, "POST", teacherRoom+"/activity/6", map[string]bool{"open": false}, teacher, 200)
@@ -258,6 +258,58 @@ func TestLiveProjection(t *testing.T) {
 	closed := exercise(t, app, "GET", watch, nil, teacher, 200)
 	if strings.Contains(closed.Body.String(), "battery") {
 		t.Fatal("locked activity remained visible")
+	}
+}
+
+func TestRetrofitWorkspace(t *testing.T) {
+	app, err := newServer(t.TempDir(), "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	teacher := exercise(t, app, "POST", "/api/teacher/login", map[string]string{"password": "2026"}, nil, 200).Result().Cookies()[0]
+	exercise(t, app, "POST", "/api/teacher/rooms", map[string]string{"title": "改装测试"}, teacher, 201)
+	join := exercise(t, app, "POST", "/api/student/current", map[string]string{"device": token(32)}, nil, 201)
+	student := join.Result().Cookies()[0]
+	room := app.rooms[app.active]
+	teacherPath := "/api/teacher/rooms/" + app.active
+	studentPath := "/api/student/" + app.active
+	for _, person := range room.People {
+		person.Answers[5] = &submission{Values: []string{"hall", "drive", "avoid"}, Text: "旧课堂记录"}
+	}
+	exercise(t, app, "POST", teacherPath+"/activity/6", map[string]bool{"open": true}, teacher, 200)
+	oldExport := exercise(t, app, "GET", teacherPath+"/export", nil, teacher, 200).Body.String()
+	if !strings.Contains(oldExport, "校园安全卫士,走廊巡逻；行走驱动；红外避障") {
+		t.Fatal("legacy export lost activity name or answer labels")
+	}
+	oldDetails := exercise(t, app, "GET", teacherPath+"/results?stage=6", nil, teacher, 200).Body.String()
+	if !strings.Contains(oldDetails, `"activity":"校园安全卫士"`) {
+		t.Fatal("legacy results must be labeled as such")
+	}
+	activity := exercise(t, app, "GET", studentPath+"/activity/6", nil, student, 200).Body.String()
+	if !strings.Contains(activity, `"answer":null`) || !strings.Contains(activity, "热成像相机") || strings.Contains(activity, `"jobs"`) {
+		t.Fatal("old answer should not prefill the new activity")
+	}
+	for _, invalid := range [][]string{nil, {"hall", "drive"}, {"wash", "wash"}, {"wash", "unknown"}} {
+		exercise(t, app, "POST", studentPath+"/activity/6", testAnswer(invalid, ""), student, 400)
+	}
+	exercise(t, app, "POST", studentPath+"/live", liveFrame{Stage: 6, Draft: liveDraft{Values: []string{"drive"}}}, student, 400)
+	frame := liveFrame{Stage: 6, Draft: liveDraft{Values: []string{"wash", "drop"}, Playing: true, Step: 3}}
+	exercise(t, app, "POST", studentPath+"/live", frame, student, 204)
+	view := exercise(t, app, "GET", teacherPath+"/live?seat=1", nil, teacher, 200).Body.String()
+	if !strings.Contains(view, `"done":false`) || !strings.Contains(view, `"values":["wash","drop"]`) || !strings.Contains(view, `"step":3`) {
+		t.Fatal("projection must show the new selection without counting the legacy answer")
+	}
+	seats := exercise(t, app, "GET", teacherPath+"/live-seats", nil, teacher, 200).Body.String()
+	if !strings.Contains(seats, `{"seat":1,"stage":6,"count":2}`) || strings.Contains(seats, "drop") {
+		t.Fatal("seat cards should only receive the module count")
+	}
+	saved := exercise(t, app, "POST", studentPath+"/activity/6", testAnswer(frame.Draft.Values, ""), student, 200).Body.String()
+	if !strings.Contains(saved, `"done":[false,false,false,false,false,true]`) {
+		t.Fatal("submitting a new activity must mark it complete")
+	}
+	activity = exercise(t, app, "GET", studentPath+"/activity/6", nil, student, 200).Body.String()
+	if !strings.Contains(activity, `"values":["wash","drop"]`) {
+		t.Fatal("saved module order must restore the most recent attachment")
 	}
 }
 

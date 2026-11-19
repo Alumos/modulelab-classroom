@@ -276,7 +276,7 @@ func (app *server) status(room *classroom) roomStatus {
 func (app *server) studentStatus(room *classroom, person *participant) any {
 	var done [stageCount]bool
 	for idx, answer := range person.Answers {
-		done[idx] = answer != nil
+		done[idx] = currentAnswer(idx, answer) != nil
 	}
 	return struct {
 		roomStatus
@@ -295,7 +295,7 @@ func (app *server) teacherStatus(room *classroom) any {
 		}
 		done := 0
 		for idx, answer := range person.Answers {
-			if answer != nil {
+			if (room.Code != app.active && answer != nil) || currentAnswer(idx, answer) != nil {
 				counts[idx]++
 				done++
 			}
@@ -381,7 +381,7 @@ func (app *server) student(res http.ResponseWriter, req *http.Request, parts []s
 				return
 			}
 			if req.Method == "GET" {
-				jsonOut(res, 200, map[string]any{"content": catalog[idx], "answer": person.Answers[idx]})
+				jsonOut(res, 200, map[string]any{"content": catalog[idx], "answer": currentAnswer(idx, person.Answers[idx])})
 				return
 			}
 			if req.Method == "POST" {
@@ -469,17 +469,22 @@ func (app *server) currentStudent(res http.ResponseWriter, req *http.Request) {
 }
 
 type result struct {
-	Name   string    `json:"name"`
-	Values []string  `json:"values"`
-	Text   string    `json:"text,omitempty"`
-	At     time.Time `json:"at"`
+	Name     string    `json:"name"`
+	Values   []string  `json:"values"`
+	Text     string    `json:"text,omitempty"`
+	At       time.Time `json:"at"`
+	Activity string    `json:"activity,omitempty"`
 }
 
 func results(room *classroom, idx int) []result {
 	items := make([]result, 0)
 	for _, person := range room.People {
 		if answer := person.Answers[idx]; answer != nil {
-			items = append(items, result{person.Name, displayValues(idx, answer.Values), answer.Text, answer.At})
+			entry := result{Name: person.Name, Values: displayValues(idx, answer.Values), Text: answer.Text, At: answer.At}
+			if legacyRetrofitAnswer(idx, answer.Values) {
+				entry.Activity = legacyStageSix
+			}
+			items = append(items, entry)
 		}
 	}
 	sort.Slice(items, func(left, right int) bool { return items[left].At.After(items[right].At) })
@@ -506,7 +511,11 @@ func exportRoom(res http.ResponseWriter, room *classroom) {
 	chinaTime := time.FixedZone("UTC+8", 8*3600)
 	for idx := range stageCount {
 		for _, item := range results(room, idx) {
-			_ = writer.Write([]string{csvCell(item.Name), stageNames[idx], csvCell(strings.Join(item.Values, "；")), csvCell(item.Text), item.At.In(chinaTime).Format("2006-01-02 15:04:05")})
+			activity := item.Activity
+			if activity == "" {
+				activity = stageNames[idx]
+			}
+			_ = writer.Write([]string{csvCell(item.Name), activity, csvCell(strings.Join(item.Values, "；")), csvCell(item.Text), item.At.In(chinaTime).Format("2006-01-02 15:04:05")})
 		}
 	}
 	writer.Flush()

@@ -54,7 +54,7 @@ func progressFor(person *participant, frame *liveFrame) seatProgress {
 	}
 	entry.Stage = frame.Stage
 	entry.Count = len(frame.Draft.Values)
-	entry.Done = person.Answers[frame.Stage-1] != nil
+	entry.Done = currentAnswer(frame.Stage-1, person.Answers[frame.Stage-1]) != nil
 	switch frame.Stage {
 	case 1:
 		entry.Ready = frame.Draft.Flight
@@ -159,7 +159,12 @@ func validLive(stage int, draft liveDraft) bool {
 	case 5:
 		return len(draft.Slots) == len(wiring) && containsOnly(draft.Slots, append(itemIDs(parts), "")) && validItem(parts, draft.Selected) && validItem(parts, draft.Focus)
 	case 6:
-		return validItem(jobs, draft.Selected) && validItem(robotModules, draft.Focus) && containsOnly(draft.Values, itemIDs(robotModules))
+		for _, id := range draft.Values {
+			if !isRetrofit(id) {
+				return false
+			}
+		}
+		return draft.Step >= 0 && (len(draft.Values) > 0 || !draft.Playing)
 	}
 	return false
 }
@@ -222,7 +227,7 @@ func (app *server) watchFrame(res http.ResponseWriter, req *http.Request, room *
 			*liveFrame
 			Content any  `json:"content,omitempty"`
 			Done    bool `json:"done"`
-		}{frame, content, person.Answers[frame.Stage-1] != nil})
+		}{frame, content, currentAnswer(frame.Stage-1, person.Answers[frame.Stage-1]) != nil})
 		return
 	}
 	reject(res, 404, "这位学生还未加入课堂。")

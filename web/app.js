@@ -2,9 +2,10 @@
   'use strict';
 
   var root = document.getElementById('app');
+  var artURL = '/art.svg?v=7#';
   var stages = [
     ['拆解无人机', 'drone'], ['生活搜寻', 'computer'], ['小组研究', 'cooker'],
-    ['彩灯编程', 'light'], ['电脑组装', 'board'], ['校园安全卫士', 'robot']
+    ['彩灯编程', 'light'], ['电脑组装', 'board'], ['无人机改装', 'retrofit-drone']
   ];
   var teacher = /^\/teacher\/?$/.test(location.pathname);
   var code = '';
@@ -84,8 +85,8 @@
   function failed(data) { message(data.error || '暂时无法连接，请重试。', 'error'); }
   function svg(name, classes) {
     return '<svg class="art ' + (classes || '') + '" aria-hidden="true" focusable="false" ' +
-      'viewBox="0 0 320 200"' + (classes === 'assembly-art' || classes === 'campus-art' ? ' preserveAspectRatio="none"' : '') +
-      '><use xlink:href="/art.svg?v=5#' + esc(name) + '"></use></svg>';
+      'viewBox="0 0 320 200"' + (classes === 'assembly-art' ? ' preserveAspectRatio="none"' : '') +
+      '><use xlink:href="' + artURL + esc(name) + '"></use></svg>';
   }
 
   function btn(text, action, classes, extra) {
@@ -296,7 +297,8 @@
     var saved = {values: values.slice(), text: answer ? answer.text || '' : '', selected: '', playing: false};
     if (index === 0) { saved.flight = values.indexOf('flight') >= 0; saved.values = values.filter(function (value) { return value !== 'flight'; }); saved.step = -1; }
     if (index === 1) saved.reveal = !!answer;
-    if (index === 2 || index === 5) { saved.selected = values[0] || ''; saved.values = values.slice(1); }
+    if (index === 2) { saved.selected = values[0] || ''; saved.values = values.slice(1); }
+    if (index === 5) saved.step = 0;
     if (index === 3) {
       saved.color = values[0] || 'blue';
       saved.values = values.slice(1, 4);
@@ -377,7 +379,7 @@
   function benchArt(part, variant, spinning) {
     var size = fittings[part].size;
     return '<svg class="bench-art bench-' + variant + '" viewBox="0 0 ' + size.join(' ') + '" aria-hidden="true" focusable="false">' +
-      (spinning ? '<g class="flight-blades">' : '') + '<use xlink:href="/art.svg?v=5#' + variant + '-' + part + '" width="' + size[0] + '" height="' + size[1] + '"></use>' +
+      (spinning ? '<g class="flight-blades">' : '') + '<use xlink:href="' + artURL + variant + '-' + part + '" width="' + size[0] + '" height="' + size[1] + '"></use>' +
       (spinning ? '</g>' : '') + '</svg>';
   }
 
@@ -608,7 +610,7 @@
       (mode === 'old' ? direct : modular) + '</section><section class="light-preview" aria-label="无人机预览"><div class="light-preview-head"><h2>无人机预览</h2>' +
       btn(saved.playing ? '停止' : '运行', 'run', 'button primary', 'id="run-lights"' + (mode === 'new' && !lights.shared ? ' disabled' : '')) + '</div>' +
       '<div class="light-flight" id="light-flight"><div class="light-drone"><svg class="art" viewBox="0 0 320 200" aria-hidden="true" focusable="false">' +
-      '<use xlink:href="/art.svg?v=5#drone"></use><path class="light-lenses" d="m54 129 10-2m193 0 10 2"/><g class="light-leds"><path class="light-glow" d="m54 129 10-2m193 0 10 2"/>' +
+      '<use xlink:href="' + artURL + 'drone"></use><path class="light-lenses" d="m54 129 10-2m193 0 10 2"/><g class="light-leds"><path class="light-glow" d="m54 129 10-2m193 0 10 2"/>' +
       '<path class="light-beam" d="m54 129 10-2m193 0 10 2"/><path class="light-core" d="m54 129 10-2m193 0 10 2"/></g></svg></div>' +
       '<p id="light-status" class="light-status" aria-live="polite">待运行</p></div>' + lightComparison(saved) + '</section></div>' +
       textField('只改一处，两种写法有什么不同？', saved.text, '对比三段灯光，写下你的发现。');
@@ -649,7 +651,7 @@
     return '<p class="instruction">把部件拖进对应空槽，再按电源开机。</p>' + assemblyRack(content.parts, saved.slots) +
       '<div class="assembly-board pc-board' + (saved.on ? ' booted' : '') + (saved.playing ? ' starting' : '') + '"><div class="bench-device">' +
       svg('pc-workbench', 'assembly-art') + '<div class="bench-layer cpu-fan"><svg class="assembly-art" viewBox="57 64 32 32" aria-hidden="true" focusable="false">' +
-      '<use xlink:href="/art.svg?v=5#pc-fan" width="320" height="200"></use></svg></div>' + (saved.on ? svg('pc-leds', 'assembly-art') : '') +
+      '<use xlink:href="' + artURL + 'pc-fan" width="320" height="200"></use></svg></div>' + (saved.on ? svg('pc-leds', 'assembly-art') : '') +
       computerParts.map(function (part, index) {
         return saved.slots[index] && part !== 'ram' ? svg('cable-' + part, 'assembly-art') : '';
       }).join('') + computerParts.map(function (part, index) {
@@ -659,20 +661,176 @@
         btn('拆下全部', 'reset', 'button secondary', 'id="reset"' + (saved.playing ? ' disabled' : '')));
   }
 
+  var hillside = '<path d="M0 297l93-57 45 23 59-40 103 76 85-54 58 30 96-62 101 67v90H0z" fill="#344a51"/>' +
+    '<path d="M0 329l97-37 88 19 86-30 104 29 139-46 126 43v63H0z" fill="#283d40"/><path d="M0 356l146-31 104 8 134-12 121 22 135-19v46H0z" fill="#44534b"/>' +
+    '<path d="m76 345 32-6 13 5-12 6zm432 4 44-12 10 6-15 7zm-283 8 23-9 21 3-9 7z" fill="#687367"/>';
+
+  var retrofitScenes = {
+    wash: '<path d="M420 211l205-28v183H420z" fill="#789db3" stroke="#bed3dd" stroke-width="3"/><path d="m423 232 194-26v150H423z" fill="#355970"/>' +
+      '<path d="m425 299 113-81 55-7-168 119z" fill="#7cabbc" opacity=".6"/><path d="m426 235 190-26v147H426z" fill="#a28f6d" opacity=".84" data-effect="dirt"/>' +
+      '<path d="m425 261 190-24m-190 62 190-19m-190 53 190-9m-143-98v130m52-138v138m48-145v145" stroke="#cad8dc" stroke-width="3" opacity=".72"/>' +
+      '<g data-effect="water" fill="none" stroke-linecap="round" opacity="0"><path data-effect="jet" stroke="#a2e8f7" stroke-width="5"/><path data-effect="jet-detail" stroke="#eeffff" stroke-width="2" stroke-dasharray="4 8"/></g>',
+    grab: hillside + '<path data-effect="cable" stroke="#c5d9dc" stroke-width="2.5"/>' +
+      '<g data-effect="litter"><path d="m-7 0 2-9 4-4 1-8 6 1 1 6 4 6-3 12z" fill="#85bfc3" stroke="#c6e4de" stroke-width="2"/><path d="M-4-7h13v5H-5z" fill="#e2d9ac"/></g>' +
+      '<g data-effect="tongs" stroke="#182c38" stroke-width="2" stroke-linejoin="round"><path data-effect="jaw-left" d="M-3-3l-11 13 3 12 8 2 2-5-6-7 9-13z" fill="#a9c2d0"/>' +
+      '<path data-effect="jaw-right" d="M3-3l11 13-3 12-8 2-2-5 6-7-9-13z" fill="#a9c2d0"/><rect x="-9" y="-9" width="18" height="12" rx="3" fill="#e7af64"/></g>',
+    led: '<g fill="#d7e7f1" opacity=".65"><circle cx="77" cy="261" r="2"/><circle cx="183" cy="206" r="1.5"/><circle cx="536" cy="237" r="2"/><circle cx="590" cy="198" r="1.5"/><circle cx="469" cy="269" r="1.3"/></g>' +
+      '<path d="M0 370v-55l32-6 24 16 34-1 24-30 22 16 23-4 20 30 32-19 73 9 56-17 35 16 58-8 26 18 36-27 53 18 38-17 54 19v42z" fill="#192e43"/>' +
+      '<ellipse data-effect="washlight" cx="320" cy="309" rx="143" ry="26" fill="#7c8eff" opacity=".12"/>',
+    cargo: hillside + '<path d="M42 346q90-36 170-14m-199 26q107-35 178-12m246-14q72-31 174 0m-194 16q93-25 200 0" fill="none" stroke="#799675" stroke-width="7"/>' +
+      '<path d="m241 344 12-12h135l15 12v15H241z" fill="#334152" stroke="#7d919a" stroke-width="2"/><path data-effect="sling" fill="none" stroke="#f1c07e" stroke-width="2.5"/>' +
+      '<g data-effect="crate"><path d="m-32-22 14-10h55l-15 10z" fill="#d4a773" stroke="#654a39" stroke-width="2"/><path d="m22-22 15-10v24L22 0z" fill="#906347" stroke="#654a39" stroke-width="2"/>' +
+      '<path d="M-32-22h54V0h-54z" fill="#b38151" stroke="#654a39" stroke-width="2"/><path d="M-29-15h47m-47 7h47" stroke="#e6b784" stroke-width="2"/><path d="M-14-26q-21-13 1-13 11 3 14 12 17-19 27-10-1 10-25 12z" fill="#74a363"/><path d="m-18-32 19 8 19-10" fill="none" stroke="#c2d39a"/></g>',
+    mist: '<path d="M0 309q160-43 321-13 149-33 319 12v62H0z" fill="#4e6350"/>' +
+      '<path d="m-15 363 188-67m-112 74 152-75m-61 75 102-74m-10 74 43-76m47 76-9-73m113 73-67-74m165 74-124-74m253 74-209-75" stroke="#a4ad70" stroke-width="6" opacity=".6"/>' +
+      '<ellipse data-effect="wet" cx="320" cy="326" rx="134" ry="23" fill="#a0dcc1" opacity="0"/><g data-effect="drops" stroke="#b4f5db" stroke-width="2.8" stroke-linecap="round"></g>',
+    horn: '<path d="M0 339Q206 288 640 329v41H0z" fill="#344954"/><path d="M0 356q292-33 640 0" stroke="#729097" stroke-width="2" fill="none"/>' +
+      '<g data-effect="waves" fill="none" stroke="#8ee4f4" stroke-width="3" stroke-linecap="round"><path d="M387 186q22 18 0 39"/><path d="M408 178q33 27 0 56"/><path d="M430 168q45 36 0 76"/></g>' +
+      '<g data-effect="callout"><path d="M476 173h136v48H483l-19 10 8-15v-39z" fill="#e4fafb"/><text x="542" y="203" text-anchor="middle" fill="#19384f" font-size="23" font-weight="700">请慢行！</text></g>' +
+      '<g transform="translate(538 303)" fill="#c5d2d2"><circle cy="-30" r="9"/><path d="M-11-18h22l4 22h-7L6 28H-1l-1-19-3 19h-7l1-24h-6z"/></g>',
+    drop: '<path d="M0 348q309-64 640 0v22H0z" fill="#344956"/><ellipse cx="320" cy="337" rx="87" ry="22" fill="#22344a" stroke="#a9d6df" stroke-width="2" stroke-dasharray="8 5"/>' +
+      '<ellipse data-effect="landing" cx="320" cy="337" rx="58" ry="13" fill="none" stroke="#9cebc2" stroke-width="3" opacity="0"/>' +
+      '<g data-effect="parcel" stroke="#7b5b3c" stroke-width="2"><path d="m-19-16 10-6h27l-8 6v17h-29z" fill="#dfb680"/><path d="m10-16 8-6v16l-8 7z" fill="#aa7c4c"/>' +
+      '<path d="M-6-16v16m0-16 8-6" stroke="#fff0ac" stroke-width="4"/></g>',
+    thermal: hillside + '<path d="m326 223 105 93h158z" fill="#aa95ff" opacity=".12"/><rect x="422" y="230" width="190" height="118" rx="11" fill="#251f3a" stroke="#9c94c2" stroke-width="3"/>' +
+      '<path d="m433 322 43-43 34 18 30-40 61 60v20H433z" fill="#4a3b71"/><path d="m434 329 45-12 47 8 48-26 27 17v21H434z" fill="#5a4282"/>' +
+      '<g data-effect="heat" transform="translate(548 307)"><circle cy="-13" r="7" fill="#fff2b1"/><path d="M-7-4h14l5 16H6L4 23H-4l-1-11h-7z" fill="#ffab72"/><path d="M-18-22h7m22 0h7v7m0 32v8h-7m-22 0h-7v-8m0-32v-7" fill="none" stroke="#ffd780" stroke-width="2"/></g>' +
+      '<path data-effect="scan" stroke="#cabaff" stroke-width="2.5" opacity="0"/>',
+    beam: '<path d="M0 325l100-43 74 26 69-31 81 22 106-26 210 48v49H0z" fill="#283e4b"/>' +
+      '<path d="M181 370l113-80h51l128 80z" fill="#44545c"/><path d="m287 370 36-76m-91 76 80-77m108 77-80-77" stroke="#88938c" stroke-width="2" opacity=".52"/>' +
+      '<g data-effect="lightcone"><path d="M306 220h26l112 125q-111 38-247 0z" fill="#ffdb7a" opacity=".25"/><path d="M312 222h14l74 116q-79 20-168 0z" fill="#ffedaa" opacity=".27"/>' +
+      '<ellipse cx="321" cy="342" rx="122" ry="20" fill="#ffdf85" opacity=".31"/><ellipse cx="321" cy="341" rx="79" ry="12" fill="#fff0b6" opacity=".47"/></g>'
+  };
+
+  function retrofitFixture(art, x, y, width, height) {
+    return '<use xlink:href="' + artURL + esc(art) + '" x="' + x + '" y="' + y + '" width="' + width + '" height="' + height + '"></use>';
+  }
+
   function stageSix() {
     var saved = draft();
-    var job = find(content.jobs, saved.selected);
-    var active = find(content.modules, saved.focus);
-    return '<div class="robot-studio"><section class="robot-side"><div class="robot-jobs" aria-label="巡逻岗位">' + content.jobs.map(function (info) {
-      return btn(esc(info.name), 'job', 'button job-tab' + (job === info ? ' active' : ''), 'id="pick-' + info.id + '" ' + attr('value', info.id) + pressed(job === info));
-    }).join('') + '</div><div class="robot-hangar' + (job ? ' job-' + job.id : '') + (has('warning') || has('alarm') ? ' robot-lit' : '') + '">' +
-      svg(job && job.id !== 'gate' ? 'campus-' + job.id : 'campus', 'campus-art') + svg('robot-real', 'guard-art') + '<div class="robot-loadout">' + (saved.values.length ? saved.values.map(function (value) {
-        return '<span class="pill">' + esc(find(content.modules, value).name) + '</span>';
-      }).join('') : '<span>已装 0 个模块</span>') + '</div></div><p class="robot-brief">' + esc(job ? job.info : '给安全卫士选一个巡逻岗位。') + '</p></section>' +
-      '<section class="robot-tools"><div class="sheet-head"><h2>选择模块</h2><b>' + saved.values.length + ' 个</b></div><div class="robot-kit">' +
-      content.modules.map(function (info) { return picked(info, 'choose', has(info.id), 'kit-option', true, false); }).join('') +
-      '</div><p class="robot-module-tip" aria-live="polite">' + (active ? '<b>' + esc(active.name) + '：</b>' + esc(active.info) : '点选模块查看作用。') + '</p></section></div>' +
-      textField('设计方案：模块如何协同？', saved.text, '例如：避障模块发现障碍后，发信号让行走模块停下。');
+    var active = find(content.modules, saved.values[saved.values.length - 1]);
+    var scene = active ? retrofitScenes[active.id] : '';
+    var payload = !active ? '' : retrofitFixture(active.id === 'grab' ? 'kit-grab-head' : active.id === 'drop' ? 'kit-drop-body' : active.art, 240, 154, 160, 100);
+    if (active && active.id === 'drop') payload += '<g data-effect="hatch"><use xlink:href="' + artURL + 'kit-hatch" transform="translate(240 154) scale(.5)"></use></g>';
+    if (active && active.id === 'led') payload += '<g data-effect="bulbs">' + [282.5, 301, 320, 339, 357.5].map(function (left) {
+      return '<circle cx="' + left + '" cy="211" r="4.5" fill="#c2e9ff"/>';
+    }).join('') + '</g>';
+    return '<div class="retrofit-studio"><section class="retrofit-workbench" aria-label="无人机改装台">' +
+      '<div class="retrofit-display"><svg class="retrofit-scene" viewBox="0 0 640 370" aria-hidden="true" focusable="false" ' + attr('kit', active ? active.id : '') + '>' +
+      '<path d="M25 38V23h27m536 0h27v15m0 294v15h-27m-536 0H25v-15" fill="none" stroke="#8aacbd" stroke-width="2" opacity=".55"/>' +
+      '<path d="M48 155h544m-544 56h544m-544 56h544m-544 56h544M160 37v281m160-281v281m160-281v281" stroke="#a2c7d6" stroke-width="1" stroke-dasharray="3 8" opacity=".25"/>' +
+      scene + '<ellipse cx="320" cy="151" rx="217" ry="25" fill="#102131" opacity=".25"/>' +
+      '<g data-effect="mount">' + payload + '</g>' + retrofitFixture('retrofit-drone', 80, 28, 480, 170) +
+      (!active ? '<path d="M320 177v23m-13 0h26m-13-8v16" fill="none" stroke="#95d4e1" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="3 5"/><ellipse cx="320" cy="200" rx="29" ry="11" fill="none" stroke="#7ac6d7" stroke-width="2"/>' : '') + '</svg></div>' +
+      '<div class="retrofit-bubble" aria-live="polite"><div><strong>' + (active ? esc(active.task) : '挂载口空着') + '</strong><p>' +
+      (active ? esc(active.info) : '点一个模块，看看无人机能做什么。') + '</p></div>' + (active ? btn('再演示', 'retrofit-install', 'button secondary retrofit-replay', 'id="kit-replay" ' + attr('value', active.id)) : '') + '</div></section>' +
+      '<section class="retrofit-tools"><div class="retrofit-head"><h2>加装模块</h2><span>已体验 <b>' + saved.values.length + '</b> / ' + content.modules.length + '</span></div>' +
+      '<div class="retrofit-kit">' + content.modules.map(function (info) {
+        var installed = active === info;
+        var tried = has(info.id);
+        return btn(svg(info.art) + '<strong>' + esc(info.name) + '</strong><span class="retrofit-task">' + esc(info.task) + '</span>' +
+          (tried ? '<span class="retrofit-mark" aria-label="' + (installed ? '已加装' : '已体验') + '">✓</span>' : ''),
+          'retrofit-install', 'retrofit-option' + (installed ? ' installed' : ''), 'id="kit-' + info.id + '" ' + attr('value', info.id) + pressed(installed));
+      }).join('') + '</div></section></div>';
+  }
+
+  function interval(value, from, to) { return Math.max(0, Math.min(1, (value - from) / (to - from))); }
+
+  function animateRetrofit(panel, playing, finished) {
+    var scene = panel.querySelector('.retrofit-scene');
+    var kit = scene.getAttribute('data-kit');
+    if (!kit) return;
+    var nodes = {};
+    Array.prototype.forEach.call(scene.querySelectorAll('[data-effect]'), function (node) { nodes[node.getAttribute('data-effect')] = node; });
+    var droplets = [];
+    var gentle = reducedMotion && reducedMotion.matches && !fullMotion;
+    var start = flightNow();
+    var nextFrame = window.requestAnimationFrame ? function (callback) { window.requestAnimationFrame(callback); } : function (callback) { setTimeout(callback, 24); };
+    var palette = ['#ff7494', '#ffcf78', '#71f4bb', '#8fe0ff', '#bfa7ff'];
+    if (kit === 'mist') {
+      for (var slot = 0; slot < 24; slot++) {
+        var drop = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        nodes.drops.appendChild(drop);
+        droplets.push(drop);
+      }
+    }
+
+    function write(key, attribute, value) { nodes[key].setAttribute(attribute, value); }
+    function move(key, left, top) { write(key, 'transform', 'translate(' + left + ' ' + top + ')'); }
+
+    function draw() {
+      if (!document.documentElement.contains(scene)) return;
+      var age = flightNow() - start;
+      var mount = playing ? interval(age, 0, gentle ? 170 : 350) : 1;
+      var progress = playing ? interval(age, gentle ? 170 : 350, gentle ? 1300 : 3200) : 1;
+      var pulse = Math.sin(progress * Math.PI);
+      move('mount', 0, (1 - mount) * (gentle ? 7 : 22));
+      write('mount', 'opacity', .55 + mount * .45);
+      if (kit === 'wash') {
+        var waterY = 242 + 101 * progress;
+        var jet = 'M375 215Q459 218 600 ' + waterY;
+        write('jet', 'd', jet);
+        write('jet-detail', 'd', jet);
+        write('jet-detail', 'stroke-dashoffset', -progress * 165);
+        write('water', 'opacity', pulse * mount);
+        write('dirt', 'opacity', .84 * (1 - progress));
+      } else if (kit === 'grab') {
+        var lift = interval(progress, .54, .91);
+        var clawY = 222 + 93 * interval(progress, 0, .42) - 82 * lift;
+        var closing = interval(progress, .42, .54);
+        var jaw = -18 + 24 * closing;
+        write('cable', 'd', 'M320 211V' + clawY);
+        move('tongs', 320, clawY);
+        write('jaw-left', 'transform', 'rotate(' + -jaw + ')');
+        write('jaw-right', 'transform', 'rotate(' + jaw + ')');
+        move('litter', 320, 341 - lift * 82);
+      } else if (kit === 'led') {
+        var color = Math.min(4, Math.floor(progress * 5));
+        for (var bulb = 0; bulb < 5; bulb++) {
+          nodes.bulbs.children[bulb].setAttribute('fill', palette[(bulb + color) % 5]);
+          nodes.bulbs.children[bulb].setAttribute('opacity', bulb === color ? 1 : .75);
+        }
+        write('washlight', 'fill', palette[color]);
+        write('washlight', 'opacity', .15 + pulse * .15);
+      } else if (kit === 'cargo') {
+        var crateY = 333 - 66 * interval(progress, .28, .89);
+        move('crate', 320, crateY);
+        write('sling', 'd', 'M292 ' + (crateY - 24) + 'L321 ' + Math.min(crateY - 31, 227) + 'L349 ' + (crateY - 25));
+      } else if (kit === 'mist') {
+        droplets.forEach(function (drop, index) {
+          var flow = playing && progress < 1 ? (progress * 3 + index % 12 / 12) % 1 : .2 + index % 12 / 16;
+          var spread = (index % 6 - 2.5) * 17 * flow;
+          var left = (index < 12 ? 269 : 370) + spread;
+          var top = 232 + 92 * flow;
+          drop.setAttribute('x1', left);
+          drop.setAttribute('y1', top);
+          drop.setAttribute('x2', left + spread * .1);
+          drop.setAttribute('y2', top + 4 + flow * 4);
+          drop.setAttribute('opacity', mount * (.25 + .55 * pulse) * (1 - flow * .64));
+        });
+        write('wet', 'opacity', .35 * progress);
+      } else if (kit === 'horn') {
+        for (var wave = 0; wave < 3; wave++) {
+          nodes.waves.children[wave].setAttribute('opacity', playing && progress < 1 ? .2 + .8 * Math.pow(Math.sin((progress * 2 - wave * .13) * Math.PI), 2) : .65);
+        }
+        write('callout', 'opacity', interval(progress, .15, .36));
+      } else if (kit === 'drop') {
+        var fall = interval(progress, .28, .81);
+        write('hatch', 'transform', 'rotate(' + (73 * interval(progress, .06, .3)) + ' 303 221)');
+        move('parcel', 322 - 2 * fall, 243 + 93 * fall * fall);
+        write('parcel', 'opacity', interval(progress, .26, .34));
+        write('landing', 'opacity', interval(progress, .78, .95));
+      } else if (kit === 'thermal') {
+        write('heat', 'opacity', interval(progress, .58, .79));
+        write('scan', 'd', 'M' + (434 + 166 * progress) + ' 242v94');
+        write('scan', 'opacity', pulse);
+      } else if (kit === 'beam') {
+        write('lightcone', 'opacity', interval(progress, .14, .5) * (.86 + .14 * pulse));
+      }
+      if (playing && progress < 1) nextFrame(draw);
+      else if (finished) finished();
+    }
+    draw();
   }
 
   function renderStage(focus) {
@@ -688,6 +846,14 @@
     if (focus && id(focus) && !id(focus).disabled && document.activeElement !== id(focus)) id(focus).focus();
     if (stage === 2) drawWires();
     if (stage === 3) syncLightPreview(draft(), content.calls);
+    if (stage === 5) {
+      var saved = draft();
+      animateRetrofit(id('stage'), saved.playing, saved.playing ? function () {
+        saved.playing = false;
+        if (id('submit-stage')) id('submit-stage').disabled = submitting;
+        queueFrame();
+      } : null);
+    }
     queueFrame();
   }
 
@@ -696,7 +862,7 @@
     var saved = draft();
     var values = saved.values.slice();
     if (stage === 0 && saved.flight) values.push('flight');
-    if (stage === 2 || stage === 5) values.unshift(saved.selected);
+    if (stage === 2) values.unshift(saved.selected);
     if (stage === 3) {
       if (saved.playing || !saved.lights.shared || values.length !== 3) { message('先接好三处模块调用，再提交。', 'error'); return; }
       values = [saved.color].concat(values.sort(), saved.lights.direct.concat(saved.lights.shared).map(lightValues));
@@ -1015,7 +1181,7 @@
       if (status !== 200) { id('result-list').textContent = '暂时无法读取记录。'; return; }
       id('result-list').innerHTML = data.length ? data.map(function (item, index) {
         return '<article class="record"><h3>' + (projection ? '作品 ' + pad(index + 1) : esc(item.name)) + '</h3><div class="tags">' +
-          item.values.map(function (value) { return '<span class="pill">' + esc(value) + '</span>'; }).join('') + '</div>' + (item.text ? '<p>' + esc(item.text) + '</p>' : '') + '</article>';
+          (item.activity ? '<span class="pill">' + esc(item.activity) + '（旧活动）</span>' : '') + item.values.map(function (value) { return '<span class="pill">' + esc(value) + '</span>'; }).join('') + '</div>' + (item.text ? '<p>' + esc(item.text) + '</p>' : '') + '</article>';
       }).join('') : '<p class="empty-results">还没有提交记录。</p>';
     });
   }
@@ -1098,7 +1264,7 @@
       var count = entry.count || 0;
       activity = stages[entry.stage - 1][0];
       progress = ['已装 ' + count + ' / 6', '已选 ' + count + ' 项', '已连 ' + count + ' / 3',
-        '已放 ' + count + ' / 3', '已装 ' + count + ' / 5', '已选 ' + count + ' 个模块'][entry.stage - 1];
+        '已放 ' + count + ' / 3', '已装 ' + count + ' / 5', '已体验 ' + count + ' 个模块'][entry.stage - 1];
       if (entry.done) progress += ' · 已提交';
       else if (entry.ready) progress = entry.stage === 1 ? '已试飞' : '已开机';
     }
@@ -1222,6 +1388,7 @@
     if (index === 0 && incoming.playing) animateFlight(panel);
     if (index === 2) drawWires();
     if (isLights) syncLightPreview(incoming, content.calls);
+    if (index === 5) animateRetrofit(panel, incoming.playing);
     if (previousDraft) drafts[index] = previousDraft;
     else delete drafts[index];
     stage = previousStage;
@@ -1245,9 +1412,16 @@
       var options = content.projects.filter(function (item) { return item.id !== draft().selected; });
       actions.project({id: 'random'}, options[Math.floor(Math.random() * options.length)].id);
     },
-    choose: function (button, value) { toggle(value); draft().focus = value; renderStage(button.id); },
     'pair-source': function (button, value) { draft().focus = draft().focus === value ? '' : value; draft().notice = ''; draft().wrong = false; renderStage(button.id); },
-    job: function (button, value) { draft().selected = value; renderStage(button.id); },
+    'retrofit-install': function (button, value) {
+      var saved = draft();
+      var previous = saved.values.indexOf(value);
+      if (previous >= 0) saved.values.splice(previous, 1);
+      saved.values.push(value);
+      saved.step++;
+      saved.playing = true;
+      renderStage(button.id);
+    },
     run: runLights,
     'light-mode': function (button, value) {
       var saved = draft();
