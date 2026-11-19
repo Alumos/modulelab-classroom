@@ -53,6 +53,7 @@ type classroom struct {
 	Title   string                  `json:"title"`
 	Created time.Time               `json:"created"`
 	Version uint64                  `json:"version"`
+	Reset   uint64                  `json:"reset,omitempty"`
 	Open    [stageCount]bool        `json:"open"`
 	People  map[string]*participant `json:"people"`
 	roster  uint64
@@ -259,12 +260,13 @@ type roomStatus struct {
 	Code    string           `json:"code"`
 	Title   string           `json:"title"`
 	Version uint64           `json:"version"`
+	Reset   uint64           `json:"reset"`
 	Open    [stageCount]bool `json:"open"`
 	Active  bool             `json:"active"`
 }
 
 func (app *server) status(room *classroom) roomStatus {
-	status := roomStatus{room.Code, room.Title, room.Version, room.Open, room.Code == app.active}
+	status := roomStatus{room.Code, room.Title, room.Version, room.Reset, room.Open, room.Code == app.active}
 	if !status.Active {
 		status.Open = [stageCount]bool{}
 	}
@@ -353,6 +355,10 @@ func (app *server) student(res http.ResponseWriter, req *http.Request, parts []s
 	person := room.People[cookieKey(req, "lab_student")]
 	if person == nil {
 		reject(res, 401, "请先加入课堂。")
+		return
+	}
+	if req.Method == "POST" && room.Reset != 0 && req.Header.Get("X-Classroom-Reset") != strconv.FormatUint(room.Reset, 10) {
+		reject(res, 409, "本堂课的学生数据已清除，请重新加入。")
 		return
 	}
 	if len(parts) == 3 && parts[2] == "status" && req.Method == "GET" {
@@ -506,6 +512,30 @@ func exportRoom(res http.ResponseWriter, room *classroom) {
 	writer.Flush()
 }
 
+func (app *server) clearStudents(res http.ResponseWriter, req *http.Request, room *classroom) {
+	if room.Code != app.active {
+		reject(res, 410, "这堂课已结束，历史记录不能清除。")
+		return
+	}
+	var input struct{ Reset *uint64 }
+	if !decode(res, req, &input) {
+		return
+	}
+	if input.Reset == nil || *input.Reset != room.Reset {
+		reject(res, 409, "课堂的学生数据已更新，请重新确认。")
+		return
+	}
+	if len(room.People) > 0 {
+		people := room.People
+		room.People = make(map[string]*participant)
+		room.Reset++
+		if !app.stored(res, room, func() { room.People = people; room.Reset-- }) {
+			return
+		}
+	}
+	jsonOut(res, 200, app.teacherStatus(room))
+}
+
 func (app *server) teacher(res http.ResponseWriter, req *http.Request, parts []string) {
 	key := cookieKey(req, "lab_teacher")
 	if !app.teachers[key].After(time.Now()) {
@@ -579,6 +609,10 @@ func (app *server) teacher(res http.ResponseWriter, req *http.Request, parts []s
 			}
 			if len(parts) == 3 && req.Method == "GET" {
 				jsonOut(res, 200, app.teacherStatus(room))
+				return
+			}
+			if len(parts) == 4 && parts[3] == "clear-students" && req.Method == "POST" {
+				app.clearStudents(res, req, room)
 				return
 			}
 			if len(parts) == 4 && req.Method == "GET" {

@@ -1,6 +1,10 @@
 package main
 
-import "slices"
+import (
+	"slices"
+	"strconv"
+	"strings"
+)
 
 type item struct {
 	ID   string `json:"id"`
@@ -59,7 +63,29 @@ var researchCorrect = [][]string{
 	{"heat", "massage", "music"}, {"lens", "mobile", "screen"}, {"heater", "sensor", "rice-control"}, {"drive", "brake", "lights"}, {"wheels", "clean", "avoid"},
 }
 
-var colors = []item{{"blue", "蓝色", "", ""}, {"amber", "橙色", "", ""}, {"green", "绿色", "", ""}, {"purple", "紫色", "", ""}}
+var colors = []item{{"blue", "蓝色", "", ""}, {"amber", "橙色", "", ""}, {"green", "绿色", "", ""}, {"purple", "紫色", "", ""}, {"red", "红色", "", ""}}
+var lightPhases = []string{"起飞前", "航拍中", "降落后"}
+var lightCalls = []string{"call-1", "call-2", "call-3"}
+
+type lightSetting struct {
+	Color    string `json:"color"`
+	Duration int    `json:"duration"`
+	Enabled  bool   `json:"enabled"`
+}
+
+func (setting lightSetting) valid() bool {
+	return find(colors, setting.Color).ID != "" && setting.Duration >= 500 && setting.Duration <= 2000 && setting.Duration%500 == 0
+}
+
+func parseLightSetting(value string) (lightSetting, bool) {
+	fields := strings.Split(value, ":")
+	if len(fields) != 3 || (fields[2] != "on" && fields[2] != "off") {
+		return lightSetting{}, false
+	}
+	duration, err := strconv.Atoi(fields[1])
+	setting := lightSetting{fields[0], duration, fields[2] == "on"}
+	return setting, err == nil && setting.valid()
+}
 
 var ports = []item{
 	{"atx", "24 针供电接口", "给主板供电。", ""},
@@ -108,7 +134,7 @@ var catalog = [stageCount]any{
 	map[string]any{"items": drone, "sequence": []string{"battery", "radio", "gps", "control", "power", "camera"}},
 	map[string]any{"items": cases},
 	map[string]any{"projects": matchingProjects()},
-	map[string]any{"colors": colors, "calls": []string{"起飞前", "航拍中", "降落后"}},
+	map[string]any{"colors": colors, "calls": lightPhases},
 	map[string]any{"ports": ports, "parts": parts},
 	map[string]any{"jobs": jobs, "modules": robotModules},
 }
@@ -176,8 +202,16 @@ func validate(idx int, values []string, text string) string {
 		}
 		return "请连对三个模块与作用，完成说明卡。"
 	case 3:
-		if len(values) != 4 || find(colors[1:], values[0]).ID == "" || !slices.Equal(values[1:], []string{"call-1", "call-2", "call-3"}) || text == "" {
-			return "请完成三处模块调用，换一种颜色，写下你的发现。"
+		if (len(values) != 4 && len(values) != 8) || !slices.Equal(values[1:4], lightCalls) || strings.TrimSpace(text) == "" {
+			return "请接好三处模块调用，写下你的发现。"
+		}
+		if len(values) == 4 && find(colors[1:], values[0]).ID == "" {
+			return "请换一种灯色再提交。"
+		}
+		for pos, value := range values[4:] {
+			if setting, ok := parseLightSetting(value); !ok || (pos == 3 && setting.Color != values[0]) {
+				return "请检查积木中的灯光设置。"
+			}
 		}
 	case 4:
 		if !slices.Equal(values, wiring) {
@@ -220,13 +254,20 @@ func displayValues(idx int, values []string) []string {
 				}
 			}
 		case 3:
-			label = find(colors, value).Name
-			if value == "call-1" {
-				label = "起飞前调用"
-			} else if value == "call-2" {
-				label = "航拍中调用"
-			} else if value == "call-3" {
-				label = "降落后调用"
+			if pos == 0 && len(values) == 4 {
+				label = find(colors, value).Name
+			} else if pos >= 1 && pos <= 3 {
+				label = lightPhases[pos-1] + "调用"
+			} else if setting, ok := parseLightSetting(value); ok && pos >= 4 && pos <= 7 {
+				label = "共用模块"
+				if pos < 7 {
+					label = "独立 · " + lightPhases[pos-4]
+				}
+				color := "不亮"
+				if setting.Enabled {
+					color = find(colors, setting.Color).Name
+				}
+				label += "：" + color + " · " + strconv.FormatFloat(float64(setting.Duration)/1000, 'f', -1, 64) + " 秒"
 			}
 		case 4:
 			if pos < len(ports) {

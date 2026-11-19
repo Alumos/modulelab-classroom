@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
 )
 
-func exercise(t *testing.T, app *server, method, path string, input any, cookie *http.Cookie, expected int) *httptest.ResponseRecorder {
+func exercise(t *testing.T, app *server, method, path string, input any, cookie *http.Cookie, expected int, reset ...string) *httptest.ResponseRecorder {
 	t.Helper()
 	var body bytes.Buffer
 	if input != nil {
@@ -25,6 +26,9 @@ func exercise(t *testing.T, app *server, method, path string, input any, cookie 
 	}
 	if cookie != nil {
 		req.AddCookie(cookie)
+	}
+	if len(reset) > 0 {
+		req.Header.Set("X-Classroom-Reset", reset[0])
 	}
 	rec := httptest.NewRecorder()
 	app.handler().ServeHTTP(rec, req)
@@ -255,4 +259,116 @@ func TestLiveProjection(t *testing.T) {
 	if strings.Contains(closed.Body.String(), "battery") {
 		t.Fatal("locked activity remained visible")
 	}
+}
+
+func TestLightWorkspace(t *testing.T) {
+	app, err := newServer(t.TempDir(), "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	teacher := exercise(t, app, "POST", "/api/teacher/login", map[string]string{"password": "2026"}, nil, 200).Result().Cookies()[0]
+	exercise(t, app, "POST", "/api/teacher/rooms", map[string]string{"title": "积木编程"}, teacher, 201)
+	student := exercise(t, app, "POST", "/api/student/current", map[string]string{"device": token(32)}, nil, 201).Result().Cookies()[0]
+	room := "/api/teacher/rooms/" + app.active
+	studentPath := "/api/student/" + app.active
+	activity := studentPath + "/activity/4"
+	exercise(t, app, "POST", room+"/activity/4", map[string]bool{"open": true}, teacher, 200)
+
+	direct := []lightSetting{{"red", 1000, true}, {"blue", 500, true}, {"blue", 500, true}}
+	shared := lightSetting{"blue", 1500, false}
+	draft := liveDraft{Values: lightCalls, Color: shared.Color, Mode: "new", Preview: 1, Playing: true, LightStep: "wait", LightClosed: true,
+		Lights: &lightWorkspace{Direct: direct, Shared: &shared}}
+	frame := liveFrame{Stage: 4, Draft: draft}
+	invalid := frame
+	invalid.Draft.LightStep = "unknown"
+	exercise(t, app, "POST", studentPath+"/live", invalid, student, 400)
+	invalid = frame
+	invalid.Draft.Lights = &lightWorkspace{Direct: direct[:2], Shared: &shared}
+	exercise(t, app, "POST", studentPath+"/live", invalid, student, 400)
+	exercise(t, app, "POST", studentPath+"/live", frame, student, 204)
+	mirror := exercise(t, app, "GET", room+"/live?seat=1", nil, teacher, 200)
+	var projected liveFrame
+	if err := json.Unmarshal(mirror.Body.Bytes(), &projected); err != nil {
+		t.Fatal(err)
+	}
+	if projected.Draft.Lights == nil || projected.Draft.Lights.Shared == nil || *projected.Draft.Lights.Shared != shared ||
+		!slices.Equal(projected.Draft.Lights.Direct, direct) || projected.Draft.LightStep != "wait" || !projected.Draft.LightClosed {
+		t.Fatalf("projection did not preserve the workspace: %#v", projected.Draft)
+	}
+
+	values := []string{"blue", "call-1", "call-2", "call-3", "red:1000:on", "blue:500:on", "blue:500:on", "blue:1500:off"}
+	const reflection = "独立积木只改一段，共用模块一次改三段。"
+	exercise(t, app, "POST", activity, testAnswer(values[:5], reflection), student, 400)
+	for _, malformed := range []string{"blue:1300:on", "blue:500:maybe", "orange:500:on", "red:1500:off"} {
+		bad := slices.Clone(values)
+		bad[7] = malformed
+		exercise(t, app, "POST", activity, testAnswer(bad, reflection), student, 400)
+	}
+	exercise(t, app, "POST", activity, testAnswer(values, reflection), student, 200)
+	stored := exercise(t, app, "GET", activity, nil, student, 200)
+	if !strings.Contains(stored.Body.String(), "blue:1500:off") || !strings.Contains(stored.Body.String(), "red:1000:on") {
+		t.Fatal("both programs must survive submission")
+	}
+	record := exercise(t, app, "GET", room+"/results?stage=4", nil, teacher, 200)
+	if !strings.Contains(record.Body.String(), "独立 · 起飞前：红色 · 1 秒") || !strings.Contains(record.Body.String(), "共用模块：不亮 · 1.5 秒") {
+		t.Fatal("teacher record must show readable settings for both programs")
+	}
+}
+
+func TestClearCurrentStudents(t *testing.T) {
+	dir := t.TempDir()
+	app, err := newServer(dir, "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	teacher := exercise(t, app, "POST", "/api/teacher/login", map[string]string{"password": "2026"}, nil, 200).Result().Cookies()[0]
+	const classes = "/api/teacher/rooms"
+	const join = "/api/student/current"
+	device := map[string]string{"device": token(32)}
+	reset := map[string]uint64{"reset": 0}
+	answer := testAnswer([]string{"desktop", "phone", "bike"}, "")
+	frame := liveFrame{Stage: 2, Draft: liveDraft{Values: []string{"desktop"}}}
+	exercise(t, app, "POST", classes, map[string]string{"title": "之前的课"}, teacher, 201)
+	archived := app.active
+	exercise(t, app, "POST", classes+"/"+archived+"/activity/2", map[string]bool{"open": true}, teacher, 200)
+	student := exercise(t, app, "POST", join, device, nil, 201).Result().Cookies()[0]
+	exercise(t, app, "POST", "/api/student/"+archived+"/activity/2", answer, student, 200)
+	exercise(t, app, "POST", classes, map[string]string{"title": "试课", "replace": archived}, teacher, 201)
+	current := classes + "/" + app.active
+	studentURL := "/api/student/" + app.active
+	student = exercise(t, app, "POST", join, device, student, 201).Result().Cookies()[0]
+	exercise(t, app, "POST", current+"/activity/2", map[string]bool{"open": true}, teacher, 200)
+	exercise(t, app, "POST", studentURL+"/live", frame, student, 204)
+	exercise(t, app, "POST", studentURL+"/activity/2", answer, student, 200)
+	exercise(t, app, "POST", current+"/clear-students", reset, student, 401)
+	exercise(t, app, "POST", classes+"/"+archived+"/clear-students", reset, teacher, 410)
+	cleared := exercise(t, app, "POST", current+"/clear-students", reset, teacher, 200).Body.String()
+	if !strings.Contains(cleared, `"enrolled":0`) || !strings.Contains(cleared, `"reset":1`) || !strings.Contains(cleared, `"open":[false,true,false,false,false,false]`) {
+		t.Fatal("clear must empty only student data and keep the same activities open")
+	}
+	exercise(t, app, "GET", studentURL+"/status", nil, student, 401)
+	exercise(t, app, "GET", current+"/live?seat=1", nil, teacher, 404)
+	if !strings.Contains(exercise(t, app, "GET", current+"/live-seats", nil, teacher, 200).Body.String(), `"seats":[]`) ||
+		strings.TrimSpace(exercise(t, app, "GET", current+"/results?stage=2", nil, teacher, 200).Body.String()) != "[]" ||
+		!strings.Contains(exercise(t, app, "GET", classes+"/"+archived+"/results?stage=2", nil, teacher, 200).Body.String(), "学生01") {
+		t.Fatal("clear must remove active submissions and projection without touching previous classes")
+	}
+	reopened, err := newServer(dir, "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored := reopened.rooms[app.active]
+	if len(stored.People) != 0 || stored.Reset != 1 || !stored.Open[1] {
+		t.Fatal("clear must survive restart")
+	}
+	rejoined := exercise(t, app, "POST", join, device, student, 201)
+	student = rejoined.Result().Cookies()[0]
+	if !strings.Contains(rejoined.Body.String(), `"name":"学生01"`) || !strings.Contains(rejoined.Body.String(), `"done":[false,false,false,false,false,false]`) {
+		t.Fatal("returning browsers must get a fresh seat with no progress")
+	}
+	exercise(t, app, "POST", current+"/clear-students", reset, teacher, 409)
+	exercise(t, app, "POST", studentURL+"/activity/2", answer, student, 409, "0")
+	exercise(t, app, "POST", studentURL+"/live", frame, student, 409, "0")
+	exercise(t, app, "POST", studentURL+"/live", frame, student, 204, "1")
+	exercise(t, app, "POST", studentURL+"/activity/2", answer, student, 200, "1")
 }

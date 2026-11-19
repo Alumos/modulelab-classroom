@@ -6,22 +6,30 @@ import (
 	"time"
 )
 
+type lightWorkspace struct {
+	Direct []lightSetting `json:"direct"`
+	Shared *lightSetting  `json:"shared"`
+}
+
 type liveDraft struct {
-	Values   []string `json:"values"`
-	Text     string   `json:"text,omitempty"`
-	Selected string   `json:"selected,omitempty"`
-	Focus    string   `json:"focus,omitempty"`
-	Notice   string   `json:"notice,omitempty"`
-	Wrong    bool     `json:"wrong,omitempty"`
-	Slots    []string `json:"slots,omitempty"`
-	Playing  bool     `json:"playing,omitempty"`
-	Flight   bool     `json:"flight,omitempty"`
-	Step     int      `json:"step"`
-	Reveal   bool     `json:"reveal,omitempty"`
-	Color    string   `json:"color,omitempty"`
-	Preview  int      `json:"preview"`
-	Mode     string   `json:"mode,omitempty"`
-	On       bool     `json:"on,omitempty"`
+	Values      []string        `json:"values"`
+	Text        string          `json:"text,omitempty"`
+	Selected    string          `json:"selected,omitempty"`
+	Focus       string          `json:"focus,omitempty"`
+	Notice      string          `json:"notice,omitempty"`
+	Wrong       bool            `json:"wrong,omitempty"`
+	Slots       []string        `json:"slots,omitempty"`
+	Playing     bool            `json:"playing,omitempty"`
+	Flight      bool            `json:"flight,omitempty"`
+	Step        int             `json:"step"`
+	Reveal      bool            `json:"reveal,omitempty"`
+	Color       string          `json:"color,omitempty"`
+	Preview     int             `json:"preview"`
+	Mode        string          `json:"mode,omitempty"`
+	On          bool            `json:"on,omitempty"`
+	Lights      *lightWorkspace `json:"lights,omitempty"`
+	LightStep   string          `json:"lightStep,omitempty"`
+	LightClosed bool            `json:"lightClosed,omitempty"`
 }
 
 type liveFrame struct {
@@ -134,9 +142,20 @@ func validLive(stage int, draft liveDraft) bool {
 		}
 		return draft.Selected == "" && len(draft.Values) == 0
 	case 4:
+		if lights := draft.Lights; lights != nil {
+			if len(lights.Direct) != len(lightPhases) || (lights.Shared == nil && len(draft.Values) != 0) ||
+				(lights.Shared != nil && (!lights.Shared.valid() || lights.Shared.Color != draft.Color)) {
+				return false
+			}
+			for _, setting := range lights.Direct {
+				if !setting.valid() {
+					return false
+				}
+			}
+		}
 		return find(colors, draft.Color).ID != "" && (draft.Selected == "" || draft.Selected == "module") &&
 			(draft.Mode == "" || draft.Mode == "old" || draft.Mode == "new") && draft.Preview >= -1 && draft.Preview <= 3 &&
-			containsOnly(draft.Values, []string{"call-1", "call-2", "call-3"})
+			containsOnly(draft.Values, lightCalls) && containsOnly([]string{draft.LightStep}, []string{"", "output", "wait", "off", "skip", "done"})
 	case 5:
 		return len(draft.Slots) == len(wiring) && containsOnly(draft.Slots, append(itemIDs(parts), "")) && validItem(parts, draft.Selected) && validItem(parts, draft.Focus)
 	case 6:

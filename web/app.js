@@ -42,6 +42,10 @@
   var liveStage = 0;
   var liveContent;
   var paintedFrame = '';
+  var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  var fullMotion = false;
+  try { fullMotion = localStorage.getItem('modulelab-full-motion') === '1'; } catch (error) { }
+  document.documentElement.classList.toggle('motion-full', fullMotion);
 
   function id(name) { return document.getElementById(name); }
   function esc(value) {
@@ -54,7 +58,10 @@
     var request = new XMLHttpRequest();
     request.open(method, url, true);
     request.timeout = 9000;
-    if (method === 'POST') request.setRequestHeader('Content-Type', 'application/json');
+    if (method === 'POST') {
+      request.setRequestHeader('Content-Type', 'application/json');
+      if (!teacher && state && url.indexOf(studentURL() + '/') === 0) request.setRequestHeader('X-Classroom-Reset', String(state.reset));
+    }
     request.onload = function () {
       var result;
       if (request.responseText) {
@@ -90,8 +97,9 @@
   function feedback() { return '<p id="message" class="note" role="status" aria-live="polite"></p>'; }
 
   function header(label, action) {
-    return '<header class="top"><div class="top-inner"><a class="brand" href="' + (teacher ? '/teacher' : '/') + '">' + svg('brand') +
-      '<span>模块化的应用</span></a><div class="top-right">' + (label ? '<span class="top-label">' + esc(label) + '</span>' : '') + (action || '') + '</div></div></header>';
+    return '<header class="top' + (!teacher && state ? ' student-top' : '') + '"><div class="top-inner"><a class="brand" href="' + (teacher ? '/teacher' : '/') + '">' + svg('brand') +
+      '<span>模块化的应用</span></a><div class="top-right">' + (label ? '<span class="top-label">' + esc(label) + '</span>' : '') + (action || '') + '</div>' +
+      (reducedMotion && (reducedMotion.matches || fullMotion) ? btn(fullMotion ? '跟随系统' : '播放完整动画', 'motion', 'button motion-button', 'id="motion"') : '') + '</div></header>';
   }
 
   function field(label, name, value, opts) {
@@ -239,10 +247,12 @@
     if (document.hidden || roomSwitch) { schedule(); return; }
     if (teacher && projection) { fetchSeats(); return; }
     var activeCode = state.code;
+    var reset = state.reset;
     api('GET', teacher ? roomURL() : studentURL() + '/status?since=' + state.version, null, function (status, data) {
-      if (!state || state.code !== activeCode) return;
+      if (!state || state.code !== activeCode || (!teacher && state.reset !== reset)) return;
       if (status === 200) {
         if (teacher) updateRoom(data);
+        else if (reset !== data.reset) { join(); return; }
         else updateStudent(data);
       } else if (status === 401 || (!teacher && (status === 404 || status === 410))) {
         if (teacher) access(data.error);
@@ -258,7 +268,7 @@
     var payload = {stage: stage + 1, draft: stage >= 0 ? draft() : {}};
     var encoded = JSON.stringify(payload);
     if (encoded === lastFrame && !liveBusy) { queuedFrame = null; return; }
-    queuedFrame = {room: code, encoded: encoded};
+    queuedFrame = {room: code, reset: state.reset, encoded: encoded};
     if (!liveTimer && !liveBusy) liveTimer = setTimeout(sendFrame, 160);
   }
 
@@ -266,12 +276,14 @@
     liveTimer = null;
     var next = queuedFrame;
     queuedFrame = null;
-    if (!next || !state || next.room !== code || next.encoded === lastFrame) return;
+    if (!next || !state || next.room !== code || next.reset !== state.reset || next.encoded === lastFrame) return;
     liveBusy = true;
     api('POST', studentURL() + '/live', next.encoded, function (status) {
       liveBusy = false;
-      if (code === next.room && status === 204) lastFrame = next.encoded;
-      if (code === next.room && !queuedFrame && (status === 0 || status === 429 || status >= 500)) queuedFrame = next;
+      if (state && code === next.room && state.reset === next.reset) {
+        if (status === 204) lastFrame = next.encoded;
+        if (!queuedFrame && (status === 0 || status === 429 || status >= 500)) queuedFrame = next;
+      }
       if (queuedFrame && !liveTimer) liveTimer = setTimeout(sendFrame, status === 204 ? 160 : 650);
     });
   }
@@ -284,7 +296,13 @@
     if (index === 0) { saved.flight = values.indexOf('flight') >= 0; saved.values = values.filter(function (value) { return value !== 'flight'; }); saved.step = -1; }
     if (index === 1) saved.reveal = !!answer;
     if (index === 2 || index === 5) { saved.selected = values[0] || ''; saved.values = values.slice(1); }
-    if (index === 3) { saved.color = values[0] || 'blue'; saved.values = values.slice(1); saved.preview = -1; }
+    if (index === 3) {
+      saved.color = values[0] || 'blue';
+      saved.values = values.slice(1, 4);
+      saved.preview = -1;
+      saved.mode = answer ? 'new' : 'old';
+      saved.lights = makeLightWorkspace(values);
+    }
     if (index === 4) { saved.slots = answer ? values.slice() : ['', '', '', '', '']; saved.on = !!answer; }
     return saved;
   }
@@ -365,8 +383,8 @@
     var saved = draft();
     var active = find(content.items, saved.focus || saved.selected);
     return '<p class="instruction">把部件拖进形状相同的空槽，再试飞。</p>' + assemblyRack(content.items, saved.values) +
-      '<div class="assembly-board drone-board' + (saved.playing ? ' flying' : '') + '">' + svg('drone-shadow', 'assembly-art') +
-      '<div class="bench-device">' + svg('drone-frame', 'assembly-art') + (saved.playing ? svg('drone-flight-lights', 'assembly-art flight-lights') : '') +
+      '<div class="assembly-board drone-board' + (saved.playing ? ' flying' : '') + '"><div class="bench-layer bench-shadow">' + svg('drone-shadow', 'assembly-art') + '</div>' +
+      '<div class="bench-device">' + svg('drone-frame', 'assembly-art') + (saved.playing ? '<div class="bench-layer flight-lights">' + svg('drone-flight-lights', 'assembly-art') + '</div>' : '') +
       content.items.map(function (item) { return sockets(item, item.id, has(item.id)); }).join('') + '</div></div>' +
       assemblyReadout(active, saved.playing ? '螺旋桨转动，正在试飞' : saved.flight ? '试飞完成' : '等待安装', saved.values.length, 6,
       btn(saved.playing ? '飞行中…' : saved.flight ? '再次试飞' : '开始试飞', 'fly', 'button primary', 'id="fly"' + (saved.playing ? ' disabled' : '')) +
@@ -390,8 +408,10 @@
     return fit.positions.map(function (point, index) {
       var label = (mounted ? item.name + '已装好' : fit.seat + '：空槽') + (index ? ' ' + (index + 1) : '');
       var drawing = benchArt(part, mounted ? 'part' : 'shape');
-      if (mounted && part === 'screen' && saved.on) drawing += (saved.playing ? benchArt(part, 'display-start') : '') + benchArt(part, 'display');
-      if (mounted && part === 'power') drawing = '<span class="rotor-spin' + (index === 1 || index === 2 ? ' reverse' : '') + '">' + drawing + '</span>';
+      if (mounted && part === 'screen' && saved.on) drawing += (saved.playing ? '<span class="bench-layer boot-splash">' + benchArt(part, 'display-start') + '</span>' : '') +
+        '<span class="bench-layer boot-desktop">' + benchArt(part, 'display') + '</span>';
+      if (mounted && part === 'power') drawing = '<span class="bench-layer rotor-spin' + (index === 1 || index === 2 ? ' reverse' : '') + '">' + drawing + '</span>';
+      if (mounted) drawing = '<span class="bench-layer mounted-part">' + drawing + '</span>';
       return btn(drawing, 'drop', 'bench-socket fitting-' + part + (mounted ? ' occupied' : '') + (snapping ? ' snapping' : ''),
         'id="slot-' + target + (index ? '-' + index : '') + '" ' + attr('drop', target) + ' ' + attr('fit', part) + ' ' + attr('mount-index', index) +
         (index ? ' tabindex="-1"' : '') + (mounted ? ' ' + attr('mounted', part) : '') + ' aria-label="' + esc(label) + '"');
@@ -475,31 +495,148 @@
     }
   }
 
-  function paintLights(mode) {
+  var lightTimes = [500, 1000, 1500, 2000];
+  var lightModes = {old: '不用模块', 'new': '使用模块'};
+
+  function lightSettings(value, color) {
+    var fields = value ? value.split(':') : [];
+    return {color: fields[0] || color || 'blue', duration: Number(fields[1]) || 500, enabled: fields[2] !== 'off'};
+  }
+
+  function makeLightWorkspace(values) {
+    return {direct: [lightSettings(values[4]), lightSettings(values[5]), lightSettings(values[6])],
+      shared: values.length >= 4 ? lightSettings(values[7], values[0]) : null};
+  }
+
+  function lightValues(settings) {
+    return settings.color + ':' + settings.duration + ':' + (settings.enabled ? 'on' : 'off');
+  }
+
+  function lightProgram(saved, mode, index) {
+    return mode === 'old' ? saved.lights.direct[index] : (saved.values.indexOf('call-' + (index + 1)) >= 0 ? saved.lights.shared : null);
+  }
+
+  function lightField(key, field, label, options, current, disabled) {
+    return '<select id="light-' + key + '-' + field + '" data-light-field="' + field + '" ' + attr('light-key', key) + ' aria-label="' + esc(label) + '"' + disabled + '>' + options.map(function (option) {
+      return '<option value="' + esc(option[0]) + '"' + (option[0] === current ? ' selected' : '') + '>' + esc(option[1]) + '</option>';
+    }).join('') + '</select>';
+  }
+
+  function lightStack(key, settings, heading, disabled, action) {
+    return '<div class="light-stack" id="light-stack-' + key + '">' +
+      (heading ? '<div class="light-block light-hat">' + heading + '</div>' : '') +
+      '<div class="light-block light-output" data-light-command="output">' + lightField(key, 'state', '灯的状态', [['on', '点亮'], ['off', '保持熄灭']], settings.enabled ? 'on' : 'off', disabled) +
+      lightField(key, 'color', '灯色', content.colors.map(function (color) { return [color.id, color.name]; }), settings.color, disabled) + '灯</div>' +
+      '<div class="light-block light-clock" data-light-command="wait">等待' + lightField(key, 'time', '等待时长（秒）', lightTimes.map(function (duration) {
+        return [duration, String(duration / 1000)];
+      }), settings.duration, disabled) + '秒</div>' +
+      '<div class="light-block light-output light-end" data-light-command="off">熄灭彩灯</div>' + (action || '') + '</div>';
+  }
+
+  function lightCrate() {
+    return '<span class="light-crate" aria-hidden="true"><span class="light-crate-case"></span><span class="light-crate-lid"></span></span>';
+  }
+
+  function lightModule(saved, disabled) {
+    var closed = !!saved.lightClosed;
+    return '<div class="light-module">' + btn(lightCrate() + '<b>闪一次灯</b><span class="light-module-arrow" aria-hidden="true"></span>', 'light-open', 'light-module-toggle',
+      'id="light-open" aria-controls="light-module-body" aria-expanded="' + !closed + '"' + disabled) +
+      '<div class="light-module-body" id="light-module-body"' + (closed ? ' hidden' : '') + '>' + lightStack('shared', saved.lights.shared, '', disabled) + '</div></div>';
+  }
+
+  function packageLights(button, value) {
     var saved = draft();
-    return '<div class="lamp-bank" aria-label="三段灯色预览">' + content.calls.map(function (label, index) {
-      var color = mode === 'old' ? 'blue' : (has('call-' + (index + 1)) ? saved.color : 'off');
-      var lit = color !== 'off' && saved.playing && saved.preview === index && saved.mode === mode;
-      return '<div><i class="lamp lamp-' + color + (lit ? ' lamp-on' : '') + '" role="img" aria-label="' + (color === 'off' ? '没有调用' : esc(find(content.colors, color).name)) + '"></i><span>' + esc(label) + '</span></div>';
-    }).join('') + '</div>';
+    if (saved.lights.shared || saved.playing) return;
+    var program = lightSettings(lightValues(saved.lights.direct[Number(value)]));
+    saved.lights.shared = program;
+    saved.color = program.color;
+    saved.mode = 'new';
+    saved.lightClosed = true;
+    saved.lightStep = '';
+    if (reducedMotion && reducedMotion.matches && !fullMotion) { renderStage('light-open'); return; }
+    var stack = id('light-stack-' + value);
+    var color = find(content.colors, program.color).name;
+    Array.prototype.forEach.call(id('stage').querySelectorAll('button, select, textarea'), function (control) { control.disabled = true; });
+    stack.innerHTML = '<div class="light-seal" role="status" aria-label="将三块积木封装为闪一次灯">' +
+      '<div aria-hidden="true" class="light-seal-scene"><span class="light-seal-piece light-output">' + (program.enabled ? '点亮' + esc(color) + '灯' : '保持熄灭') + '</span>' +
+      '<span class="light-seal-piece light-clock">等待 ' + program.duration / 1000 + ' 秒</span>' +
+      '<span class="light-seal-piece light-output">熄灭彩灯</span><div class="light-seal-box">' + lightCrate() + '</div>' +
+      '<b class="light-seal-name">闪一次灯</b></div></div>';
+    stack.scrollIntoView({block: 'nearest'});
+    queueFrame();
+    clock = setTimeout(function () { renderStage('light-open'); }, 1500);
+  }
+
+  function lightComparison(saved) {
+    return '<table class="light-comparison" aria-label="两种写法的灯光设置"><thead><tr><th scope="col">灯光设置</th>' + content.calls.map(function (phase) {
+      return '<th scope="col">' + esc(phase) + '</th>';
+    }).join('') + '</tr></thead><tbody>' + ['old', 'new'].map(function (mode) {
+      return '<tr><th scope="row">' + lightModes[mode] + '</th>' + content.calls.map(function (phase, index) {
+        var program = lightProgram(saved, mode, index);
+        var color = program && find(content.colors, program.color);
+        return '<td id="light-compare-' + mode + '-' + index + '">' + (program ? '<span class="light-chip light-' + (program.enabled ? esc(program.color) : 'off') + '">' +
+          (program.enabled ? esc(color && color.name) : '不亮') + '</span><small>' + program.duration / 1000 + ' 秒</small>' : '<span class="light-missing">未接入</span>') + '</td>';
+      }).join('') + '</tr>';
+    }).join('') + '</tbody></table>';
   }
 
   function stageFour() {
     var saved = draft();
-    var color = find(content.colors, saved.color).name;
-    return '<p class="instruction">把「闪烁模块」拖到三个位置，也可以先点选再放入。</p><div class="code-work">' +
-      '<section class="code-panel original"><h2>重复写法</h2><ol class="script">' + content.calls.map(function (label) {
-        return '<li><b>' + esc(label) + '</b><code>亮蓝灯 → 等待 → 熄灭</code></li>';
-      }).join('') + '</ol><div id="lights-old">' + paintLights('old') + '</div>' + btn('运行原程序', 'run', 'button secondary', 'id="run-old" data-value="old"' + (saved.playing ? ' disabled' : '')) + '</section>' +
-      '<section class="code-panel refactor"><h2>模块写法</h2><div class="module-editor">' + btn('闪烁模块', 'part', 'code-block' + (saved.selected === 'module' ? ' picked' : ''),
-        'id="pick-module" draggable="true" data-piece="module" data-value="module"' + pressed(saved.selected === 'module')) +
-      '<label for="color">亮灯颜色</label><select id="color">' + content.colors.map(function (item) {
-        return '<option value="' + item.id + '"' + (item.id === saved.color ? ' selected' : '') + '>' + item.name + '</option>';
-      }).join('') + '</select></div><ol class="script">' + content.calls.map(function (label, index) {
-        var place = 'call-' + (index + 1);
-        return '<li><b>' + esc(label) + '</b>' + btn(has(place) ? '调用闪烁（' + color + '）' : '放入模块', 'drop', 'slot' + (has(place) ? ' filled' : ''), 'id="slot-' + place + '" ' + attr('drop', place)) + '</li>';
-      }).join('') + '</ol><div id="lights-new">' + paintLights('new') + '</div>' + btn('运行模块程序', 'run', 'button secondary', 'id="run-new" data-value="new"' + (saved.playing ? ' disabled' : '')) + '</section></div>' +
-      textField('只改一个模块，有什么变化？', saved.text, '先换一种灯色，再对比运行结果。');
+    var mode = saved.mode || 'old';
+    var lights = saved.lights;
+    var disabled = saved.playing ? ' disabled' : '';
+    var palette = btn('调用 闪一次灯', 'part', 'light-block light-call light-pick' + (saved.selected === 'module' ? ' picked' : ''),
+      'id="pick-module" data-value="module"' + (saved.playing ? ' disabled' : ' data-piece="module"') + pressed(saved.selected === 'module'));
+    var direct = '<div class="light-direct">' + lights.direct.map(function (settings, index) {
+      return lightStack(index, settings, '当 ' + esc(content.calls[index]), disabled, !lights.shared ?
+        btn('封装这组', 'light-package', 'button secondary light-package', 'id="light-package-' + index + '" ' + attr('value', index) + disabled) : '');
+    }).join('') + '</div>';
+    var calls = '<div class="light-call-list" aria-label="三段模块调用">' + content.calls.map(function (phase, index) {
+      var slot = 'call-' + (index + 1);
+      var filled = has(slot);
+      return '<div class="light-call-row" id="light-line-' + index + '"><b>' + esc(phase) + '</b>' +
+        (filled ? '<span class="light-block light-call">调用 闪一次灯</span>' : btn('接入调用', 'drop', 'light-block light-target', 'id="slot-' + slot + '" ' + attr('drop', slot) + ' aria-label="' + esc(phase + '：接入调用') + '"' + disabled)) +
+        (filled ? btn('×', 'light-remove', 'light-remove', 'id="light-remove-' + slot + '" ' + attr('value', slot) + ' aria-label="' + esc('移除' + phase + '的调用') + '"' + disabled) : '') + '</div>';
+    }).join('') + '</div>';
+    var modular = lights.shared ? lightModule(saved, disabled) + '<div class="light-palette"><span>拖动或点选调用积木</span>' + palette + '</div>' + calls :
+      '<p class="light-empty">先在「不用模块」中封装一组积木。</p>';
+    return '<div class="light-mode-tabs" aria-label="选择编程方式">' + ['old', 'new'].map(function (name) {
+      return btn(lightModes[name], 'light-mode', 'light-tab', 'id="light-mode-' + name + '" ' + attr('value', name) + pressed(name === mode) + disabled);
+    }).join('') + '</div><div class="light-studio"><section class="light-editor" aria-label="积木工作区">' +
+      (mode === 'old' ? direct : modular) + '</section><section class="light-preview" aria-label="无人机预览"><div class="light-preview-head"><h2>无人机预览</h2>' +
+      btn(saved.playing ? '停止' : '运行', 'run', 'button primary', 'id="run-lights"' + (mode === 'new' && !lights.shared ? ' disabled' : '')) + '</div>' +
+      '<div class="light-flight" id="light-flight"><div class="light-drone"><svg class="art" viewBox="0 0 320 200" aria-hidden="true" focusable="false">' +
+      '<use xlink:href="/art.svg?v=5#drone"></use><path class="light-lenses" d="m54 129 10-2m193 0 10 2"/><g class="light-leds"><path class="light-glow" d="m54 129 10-2m193 0 10 2"/>' +
+      '<path class="light-beam" d="m54 129 10-2m193 0 10 2"/><path class="light-core" d="m54 129 10-2m193 0 10 2"/></g></svg></div>' +
+      '<p id="light-status" class="light-status" aria-live="polite">待运行</p></div>' + lightComparison(saved) + '</section></div>' +
+      textField('只改一处，两种写法有什么不同？', saved.text, '对比三段灯光，写下你的发现。');
+  }
+
+  function syncLightPreview(saved, labels) {
+    var flight = id('light-flight');
+    if (!flight) return;
+    var phase = saved.preview;
+    var mode = saved.mode || 'old';
+    var current = saved.playing && phase >= 0 && phase < labels.length;
+    var command = current ? saved.lightStep || 'wait' : '';
+    var program = current && lightProgram(saved, mode, phase);
+    var lit = program && program.enabled && (command === 'output' || command === 'wait');
+    var status = id('light-status');
+    var label = current ? labels[phase] + ' · ' + (lit ? '灯亮' : command === 'skip' ? '未接入模块' : '灯灭') : saved.lightStep === 'done' ? '运行完成' : '待运行';
+    if (status.textContent !== label) status.textContent = label;
+    flight.className = 'light-flight' + (current && phase === 1 ? ' light-airborne' : '') + (lit ? ' light-lit light-' + program.color : '');
+    labels.forEach(function (name, index) {
+      var compare = id('light-compare-' + mode + '-' + index);
+      var line = id('light-line-' + index);
+      var active = current && phase === index;
+      compare.classList.toggle('light-executing', active);
+      if (line) line.classList.toggle('light-executing', active);
+    });
+    var activeStack = id('light-stack-' + (mode === 'new' ? 'shared' : phase));
+    var commands = id('stage').querySelectorAll('[data-light-command]');
+    Array.prototype.forEach.call(commands, function (node) {
+      node.classList.toggle('light-executing', !!(program && activeStack && activeStack.contains(node) && node.getAttribute('data-light-command') === command));
+    });
   }
 
   var computerParts = ['psu', 'ram', 'disk', 'screen', 'keyboard'];
@@ -509,7 +646,8 @@
     var active = find(content.parts, saved.focus || saved.selected);
     return '<p class="instruction">把部件拖进对应空槽，再按电源开机。</p>' + assemblyRack(content.parts, saved.slots) +
       '<div class="assembly-board pc-board' + (saved.on ? ' booted' : '') + (saved.playing ? ' starting' : '') + '"><div class="bench-device">' +
-      svg('pc-workbench', 'assembly-art') + svg('pc-fan', 'assembly-art cpu-fan') + (saved.on ? svg('pc-leds', 'assembly-art') : '') +
+      svg('pc-workbench', 'assembly-art') + '<div class="bench-layer cpu-fan"><svg class="assembly-art" viewBox="57 64 32 32" aria-hidden="true" focusable="false">' +
+      '<use xlink:href="/art.svg?v=5#pc-fan" width="320" height="200"></use></svg></div>' + (saved.on ? svg('pc-leds', 'assembly-art') : '') +
       computerParts.map(function (part, index) {
         return saved.slots[index] && part !== 'ram' ? svg('cable-' + part, 'assembly-art') : '';
       }).join('') + computerParts.map(function (part, index) {
@@ -539,10 +677,11 @@
     if (!content || !state || stage < 0) return;
     var activities = [stageOne, stageTwo, stageThree, stageFour, stageFive, stageSix];
     id('stage').innerHTML = title(stage) + activities[stage]() + '<div class="stage-footer">' + btn(state.done[stage] ? '更新记录' : '提交记录', 'submit-stage', 'button primary',
-      'id="submit-stage"' + (submitting || (stage === 1 && !draft().reveal) || ((stage === 0 || stage === 4) && draft().playing) ? ' disabled' : '')) + feedback() + '</div>';
+      'id="submit-stage"' + (submitting || (stage === 1 && !draft().reveal) || draft().playing ? ' disabled' : '')) + feedback() + '</div>';
     if (stage === 0 || stage === 4) fitBoard(id('stage'));
     if (focus && id(focus) && !id(focus).disabled && document.activeElement !== id(focus)) id(focus).focus();
     if (stage === 2) drawWires();
+    if (stage === 3) syncLightPreview(draft(), content.calls);
     queueFrame();
   }
 
@@ -552,7 +691,10 @@
     var values = saved.values.slice();
     if (stage === 0 && saved.flight) values.push('flight');
     if (stage === 2 || stage === 5) values.unshift(saved.selected);
-    if (stage === 3) values = [saved.color].concat(values.sort());
+    if (stage === 3) {
+      if (saved.playing || !saved.lights.shared || values.length !== 3) { message('先接好三处模块调用，再提交。', 'error'); return; }
+      values = [saved.color].concat(values.sort(), saved.lights.direct.concat(saved.lights.shared).map(lightValues));
+    }
     if (stage === 4) {
       if (!saved.on) { message('请先接好部件并开机。', 'error'); return; }
       values = saved.slots;
@@ -563,11 +705,11 @@
     var origin = generation;
     api('POST', studentURL() + '/activity/' + (stage + 1), {values: values, text: saved.text}, function (status, data) {
       submitting = false;
-      if (id('submit-stage')) id('submit-stage').disabled = stage === 1 && !draft().reveal;
+      if (id('submit-stage')) id('submit-stage').disabled = draft().playing || (stage === 1 && !draft().reveal);
       if (status === 200) updateStudent(data);
-    if (!state || origin !== generation) return;
+      if (!state || origin !== generation) return;
       if (status === 200) { renderStage('submit-stage'); message('记录已交给老师。', 'success'); }
-      else { failed(data); if (status === 423 || status === 410) poll(); }
+      else { failed(data); if (status === 401 || status === 409 || status === 423 || status === 410) poll(); }
     });
   }
 
@@ -584,33 +726,50 @@
     clock = setTimeout(function () { saved.playing = false; saved.flight = true; renderStage('fly'); }, 4600);
   }
 
-  function runLights(mode) {
+  function runLights() {
     var saved = draft();
-    if (saved.playing) return;
+    if (saved.playing) {
+      clearTimeout(clock);
+      saved.playing = false;
+      saved.preview = -1;
+      saved.lightStep = '';
+      renderStage('run-lights');
+      return;
+    }
+    var mode = saved.mode || 'old';
     saved.playing = true;
     saved.mode = mode;
+    if (mode === 'new') saved.lightClosed = false;
+    saved.selected = '';
     saved.preview = 0;
-    id('run-old').disabled = id('run-new').disabled = true;
-    function step() {
-      id('lights-' + mode).innerHTML = paintLights(mode);
+    saved.lightStep = '';
+    renderStage('run-lights');
+    function command(name, delay, next) {
+      saved.lightStep = name;
+      syncLightPreview(saved, content.calls);
       queueFrame();
-      clock = setTimeout(function () {
-        saved.preview++;
-        if (saved.preview < 3) step();
-        else {
-          saved.playing = false;
-          id('lights-' + mode).innerHTML = paintLights(mode);
-          id('run-old').disabled = id('run-new').disabled = false;
-          queueFrame();
-        }
-      }, 780);
+      clock = setTimeout(next, delay);
     }
-    step();
+    function nextPhase() {
+      saved.preview++;
+      if (saved.preview < content.calls.length) { phase(); return; }
+      saved.playing = false;
+      saved.lightStep = 'done';
+      renderStage();
+    }
+    function phase() {
+      var program = lightProgram(saved, mode, saved.preview);
+      if (!program) { command('skip', 550, nextPhase); return; }
+      command('output', 260, function () {
+        command('wait', program.duration - 260, function () { command('off', 500, nextPhase); });
+      });
+    }
+    phase();
   }
 
   function compatible(value, target) {
     if (stage === 0 || stage === 2) return value === target && !has(value);
-    if (stage === 3) return value === 'module' && /^call-[123]$/.test(target) && !has(target);
+    if (stage === 3) return value === 'module' && draft().mode === 'new' && !!draft().lights.shared && !draft().playing && /^call-[123]$/.test(target) && !has(target);
     if (stage === 4) return computerParts[Number(target)] === value && !draft().slots[Number(target)];
     return false;
   }
@@ -642,6 +801,7 @@
     } else if (stage === 3) {
       saved.values.push(target);
       saved.selected = '';
+      saved.lightStep = '';
     } else if (stage === 4) {
       saved.slots[Number(target)] = value;
       saved.selected = '';
@@ -649,7 +809,7 @@
       saved.focus = value;
       saved.notice = 'mounted';
     } else return;
-    renderStage('slot-' + target);
+    renderStage(stage === 3 ? 'light-remove-' + target : 'slot-' + target);
   }
 
   function bootComputer() {
@@ -747,7 +907,8 @@
       btn('复制', 'copy', 'button share-button') + '</div></div>' : '') + '</section><section class="stats-strip" aria-label="课堂人数概况">' +
       '<div><span>已加入</span><strong id="enrolled"></strong><span>人</span></div><div><span>已开放</span><strong id="open-count"></strong><span> / 6</span></div>' +
       '<div><span>完成全部</span><strong id="complete"></strong><span>人</span></div></section><section class="teacher-progress"><div class="section-head"><h2>六个活动</h2><div>' +
-      '<a class="button secondary teacher-only" href="' + roomURL() + '/export">导出 CSV</a></div></div><ol class="chart">' + stages.map(function (info, index) {
+      '<a class="button secondary teacher-only" href="' + roomURL() + '/export">导出 CSV</a>' +
+      (state.active ? btn('清除学生数据', 'clear-students', 'button danger', 'id="clear-students"') : '') + '</div></div><ol class="chart">' + stages.map(function (info, index) {
         return '<li><span class="chart-num">' + pad(index + 1) + '</span><b>' + info[0] + '</b><progress id="progress-' + index + '" aria-label="' + info[0] + '提交进度" max="1" value="0"></progress>' +
         '<span id="total-' + index + '" class="row-count"></span><span id="status-' + index + '" class="pill activity-state"></span>' +
         (state.active ? btn('', 'gate', 'button gate teacher-only', 'id="gate-' + index + '" ' + attr('index', index)) : '') + '</li>';
@@ -760,6 +921,8 @@
   }
 
   function paintRoom() {
+    var clear = id('clear-students');
+    if (clear) clear.disabled = !state.enrolled || clear.getAttribute('aria-busy') === 'true';
     id('enrolled').textContent = state.enrolled;
     id('complete').textContent = state.complete;
     id('open-count').textContent = state.open.filter(function (open) { return open; }).length;
@@ -810,6 +973,27 @@
       if (status === 200) { updateRoom(data); message('「' + stages[index][0] + '」' + (opening ? '已开放。' : '已关闭。'), 'success'); }
       else if (status === 401) access(data.error);
       else failed(data);
+    });
+  }
+
+  function clearStudents(button) {
+    if (!state.active || roomSwitch || !state.enrolled) return;
+    if (!window.confirm('清除「' + state.title + '」的全部学生座位、提交和投屏进度？此操作不可恢复，建议先导出 CSV。活动开放状态和历史课堂不受影响。仍开着学生页的浏览器会自动重新加入。')) return;
+    var activeCode = state.code;
+    var query = generation;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    api('POST', roomURL() + '/clear-students', {reset: state.reset}, function (status, data) {
+      if (!state || state.code !== activeCode || query !== generation) return;
+      button.removeAttribute('aria-busy');
+      if (status === 401) { access(data.error); return; }
+      if (status === 200) {
+        updateRoom(data);
+        if (!projection) { paintRoom(); message('本堂课的学生数据已清除。', 'success'); }
+      } else {
+        if (!projection) { paintRoom(); failed(data); }
+        if (status === 409 || status === 410) poll();
+      }
     });
   }
 
@@ -950,11 +1134,15 @@
   function paintFrame(frame) {
     var incoming = frame.draft;
     var mirrorText = incoming.text || '';
-    incoming.text = '';
-    var layoutKey = JSON.stringify([frame.stage, frame.done, incoming]);
-    incoming.text = mirrorText;
+    var isLights = frame.stage === 4;
+    incoming.values = incoming.values || [];
+    if (isLights && !incoming.lights) incoming.lights = makeLightWorkspace([incoming.color].concat(incoming.values));
+    var layoutKey = JSON.stringify([frame.stage, frame.done, incoming], function (key, value) {
+      return key === 'text' || (isLights && (key === 'preview' || key === 'lightStep')) ? undefined : value;
+    });
     if (layoutKey === paintedFrame) {
       if (id('response') && id('response').value !== mirrorText) id('response').value = mirrorText;
+      if (isLights) syncLightPreview(incoming, liveContent.calls);
       return;
     }
     paintedFrame = layoutKey;
@@ -964,7 +1152,6 @@
     var previousDraft = drafts[index];
     stage = index;
     content = liveContent;
-    incoming.values = incoming.values || [];
     drafts[index] = incoming;
     var activities = [stageOne, stageTwo, stageThree, stageFour, stageFive, stageSix];
     var panel = id('stage');
@@ -975,6 +1162,7 @@
     var controls = panel.querySelectorAll('button, textarea, select');
     Array.prototype.forEach.call(controls, function (control) { control.disabled = true; control.removeAttribute('draggable'); });
     if (index === 2) drawWires();
+    if (isLights) syncLightPreview(incoming, content.calls);
     if (previousDraft) drafts[index] = previousDraft;
     else delete drafts[index];
     stage = previousStage;
@@ -982,6 +1170,12 @@
   }
 
   var actions = {
+    motion: function (button) {
+      fullMotion = !fullMotion;
+      document.documentElement.classList.toggle('motion-full', fullMotion);
+      try { localStorage.setItem('modulelab-full-motion', fullMotion ? '1' : '0'); } catch (error) { }
+      button.textContent = fullMotion ? '跟随系统' : '播放完整动画';
+    },
     navigate: function (button) { loadStage(Number(button.getAttribute('data-index')), true); },
     retry: function () { loadStage(stage, true); },
     fly: playFlight,
@@ -995,10 +1189,30 @@
     choose: function (button, value) { toggle(value); draft().focus = value; renderStage(button.id); },
     'pair-source': function (button, value) { draft().focus = draft().focus === value ? '' : value; draft().notice = ''; draft().wrong = false; renderStage(button.id); },
     job: function (button, value) { draft().selected = value; renderStage(button.id); },
-    run: function (button, value) { runLights(value); },
+    run: runLights,
+    'light-mode': function (button, value) {
+      var saved = draft();
+      saved.mode = value;
+      saved.selected = '';
+      saved.lightStep = '';
+      renderStage(button.id);
+    },
+    'light-package': packageLights,
+    'light-open': function (button) {
+      var saved = draft();
+      saved.lightClosed = !saved.lightClosed;
+      button.setAttribute('aria-expanded', String(!saved.lightClosed));
+      id('light-module-body').hidden = saved.lightClosed;
+      queueFrame();
+    },
+    'light-remove': function (button, value) {
+      toggle(value);
+      draft().lightStep = '';
+      renderStage('slot-' + value);
+    },
     part: function (button, value) {
       var saved = draft();
-      if (saved.playing && (stage === 0 || stage === 4)) return;
+      if (saved.playing) return;
       saved.focus = value;
       saved.notice = '';
       saved.wrong = false;
@@ -1006,10 +1220,10 @@
       renderStage(button.id);
     },
     drop: function (button) {
-      if (draft().playing && (stage === 0 || stage === 4)) return;
+      if (draft().playing) return;
       var value = stage === 2 ? draft().focus : draft().selected;
       if (!value && button.hasAttribute('data-mounted')) { draft().focus = button.getAttribute('data-mounted'); draft().wrong = false; draft().notice = ''; renderStage(button.id); return; }
-      if (!value) { message(stage === 3 ? '先点「闪烁模块」，再点这里。' : stage === 2 ? '先点左边的模块名称。' : '先选一个部件，再点对应空槽。'); return; }
+      if (!value) { message(stage === 3 ? '先选「调用 闪一次灯」，再点这里。' : stage === 2 ? '先点左边的模块名称。' : '先选一个部件，再点对应空槽。'); return; }
       place(value, button.getAttribute('data-drop'));
     },
     boot: bootComputer,
@@ -1024,6 +1238,7 @@
     'show-create': function () { id('create-room').hidden = !id('create-room').hidden; if (!id('create-room').hidden) id('room-title').focus(); },
     copy: copyLink,
     gate: gate,
+    'clear-students': clearStudents,
     'watch-seat': function (button, value) {
       var previous = watchSeat;
       watchSeat = value;
@@ -1070,7 +1285,17 @@
 
   root.addEventListener('input', function (event) { if (!teacher && event.target.id === 'response' && draft()) { draft().text = event.target.value; queueFrame(); } });
   root.addEventListener('change', function (event) {
-    if (event.target.id === 'color') { draft().color = event.target.value; renderStage('color'); }
+    var field = event.target.getAttribute('data-light-field');
+    if (field && !teacher && stage === 3 && !draft().playing) {
+      var saved = draft();
+      var key = event.target.getAttribute('data-light-key');
+      var program = key === 'shared' ? saved.lights.shared : saved.lights.direct[Number(key)];
+      if (field === 'time') program.duration = Number(event.target.value);
+      else if (field === 'state') program.enabled = event.target.value === 'on';
+      else if (field === 'color') { program.color = event.target.value; if (key === 'shared') saved.color = program.color; }
+      saved.lightStep = '';
+      renderStage(event.target.id);
+    }
     if (event.target.id === 'classrooms') switchRoom(event.target.value);
     if (event.target.id === 'detail-stage') { detailStage = Number(event.target.value); loadResults(); }
   });
@@ -1174,8 +1399,10 @@
     current.piece.classList.remove('moving');
     showSlot(null);
     releaseGhost(current, !cancelled && (!destination || !compatible(current.name, destination)));
-    suppressPiece = current.piece.id;
-    suppressClick = Date.now() + 250;
+    if (!cancelled && !destination) {
+      suppressPiece = current.piece.id;
+      suppressClick = Date.now() + 250;
+    }
     if (destination) place(current.name, destination);
   }
 
@@ -1188,7 +1415,7 @@
 
   root.addEventListener('mousedown', function (event) {
     var piece = ancestor(event.target, 'data-piece');
-    if (teacher || finger || event.button !== 0 || !piece || !piece.classList.contains('tray-piece')) return;
+    if (teacher || finger || event.button !== 0 || !piece || (!piece.classList.contains('tray-piece') && !piece.classList.contains('light-pick'))) return;
     mouseFinger = grab(piece, event);
   });
   window.addEventListener('mousemove', function (event) {
