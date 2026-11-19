@@ -19,9 +19,7 @@ type project struct {
 	Modules []item `json:"modules"`
 }
 
-const legacyStageSix = "校园安全卫士"
-
-var stageNames = [stageCount]string{"拆解无人机", "生活搜寻", "小组研究", "彩灯编程", "电脑组装", "无人机改装"}
+var stageNames = [stageCount]string{"探解无人机模块", "分析身边的模块", "探寻模块化优势", "我来模块化实践", "我是模块组装师", "无人机改造畅想"}
 
 var drone = []item{
 	{"power", "动力模块", "电机带动螺旋桨，产生升力，也能改变飞行方向。", "propeller"},
@@ -61,9 +59,56 @@ var research = []project{
 	}},
 }
 
-var researchCorrect = [][]string{
-	{"heat", "massage", "music"}, {"lens", "mobile", "screen"}, {"heater", "sensor", "rice-control"}, {"drive", "brake", "lights"}, {"wheels", "clean", "avoid"},
+type deviceProject struct {
+	item
+	Modules  []item   `json:"modules"`
+	Solution []string `json:"solution"`
 }
+
+var devices = []deviceProject{
+	{item{"device-chair", "按摩椅", "这台按摩椅能揉捏肩背、加热靠背，还能通过充放气挤压小腿。扶手上可以选择按摩程序，也能用蓝牙播放音乐。", "chair"},
+		choices("heat:加热模块", "massage:揉捏驱动模块", "cool:冷风制冷模块", "music:蓝牙音频模块", "stitch:一根缝线", "air:气囊按摩模块", "panel:按键控制模块", "water:净水过滤模块"),
+		[]string{"heat", "massage", "music", "air", "panel"}},
+	{item{"device-phone", "智能手机", "这部手机可以显示画面并响应触摸，能拍照、通过移动网络通话和上网，也能播放声音、导航。它充好电后可以带出门使用。", "phone"},
+		choices("projector:投影模块", "lens:摄像模块", "mobile:移动通信模块", "screen:触控显示模块", "batt:电池模块", "screw:一颗螺丝", "audio:音频模块", "location:卫星定位模块", "heat:加热模块"),
+		[]string{"lens", "mobile", "screen", "batt", "audio", "location"}},
+	{item{"device-rice", "智能电饭锅", "这台电饭锅能给米饭加热，并持续检测锅里的温度。可以按键选择煮饭或保温程序，屏幕会显示剩余时间。", "cooker"},
+		choices("heater:加热模块", "sensor:温度检测模块", "lens:摄像模块", "program:程序控制模块", "tag:品牌贴纸", "keys:按键输入模块", "display:时间显示模块", "location:卫星定位模块"),
+		[]string{"heater", "sensor", "program", "keys", "display"}},
+	{item{"device-car", "电动汽车", "这辆电动汽车可以前进、转弯、刹车，能用车灯照明和提示转向。电池为车辆供电，空调能调节车内温度。", "car"},
+		choices("paint:车门油漆", "drive:电机驱动模块", "brake:制动模块", "stereo:蓝牙音响模块", "lights:照明信号模块", "steer:转向模块", "battery:动力电池模块", "ac:空调模块", "clean:吸尘模块"),
+		[]string{"drive", "steer", "brake", "lights", "battery", "ac"}},
+	{item{"device-vacuum", "扫地机器人", "这台扫地机器人会沿路线移动，先用刷子扫起灰尘，再把灰尘吸进尘盒。它遇到障碍会绕开，还会定位并找到充电座。", "vacuum"},
+		choices("air:空气加湿模块", "wheels:行走模块", "brush:滚刷清扫模块", "shell:外壳的一角", "suction:吸尘模块", "avoid:避障模块", "charge:充电模块", "location:定位导航模块", "heat:加热模块"),
+		[]string{"wheels", "brush", "suction", "avoid", "charge", "location"}},
+}
+
+func choices(entries ...string) []item {
+	items := make([]item, 0, len(entries))
+	for _, entry := range entries {
+		id, name, _ := strings.Cut(entry, ":")
+		items = append(items, item{ID: id, Name: name})
+	}
+	return items
+}
+
+func deviceByID(id string) *deviceProject {
+	for index := range devices {
+		if devices[index].ID == id {
+			return &devices[index]
+		}
+	}
+	return nil
+}
+
+var advantageQuestions = []string{
+	"无人机桨叶坏了，需要更换整机吗？",
+	"生产 10000 台无人机，它的产线流程是怎样的？",
+	"假如要提高摄像头的分辨率，该怎么升级？",
+}
+
+var advantageOptions = choices("whole:坏了就要整机更换", "combine:灵活组合", "parallel:并行开发", "cost:一定更便宜", "reuse:重复使用", "repair:维护扩展", "untested:装好就不用测试", "unit-test:单独测试", "any-fit:任意部件都能互换")
+var advantageSolution = []string{"combine", "repair", "parallel", "reuse", "unit-test"}
 
 var colors = []item{{"blue", "蓝色", "", ""}, {"amber", "橙色", "", ""}, {"green", "绿色", "", ""}, {"purple", "紫色", "", ""}, {"red", "红色", "", ""}}
 var lightPhases = []string{"起飞前", "航拍中", "降落后"}
@@ -89,19 +134,22 @@ func parseLightSetting(value string) (lightSetting, bool) {
 	return setting, err == nil && setting.valid()
 }
 
-var ports = []item{
-	{"atx", "24 针供电接口", "给主板供电。", ""},
-	{"dimm", "内存插槽", "保存程序运行时暂用的数据。", ""},
-	{"sata", "SATA 数据接口", "让主板和硬盘传输数据。", ""},
-	{"hdmi", "HDMI 接口", "把图像送到显示器。", ""},
-	{"usb", "USB 接口", "接收键盘输入。", ""},
-}
-
 var parts = []item{
-	{"screen", "显示器", "HDMI 插头", "monitor"}, {"psu", "电源", "24 针电源线", "psu"}, {"keyboard", "键盘", "USB 插头", "keyboard"}, {"ram", "内存条", "带防呆缺口的金手指", "ram"}, {"disk", "硬盘", "SATA 数据和供电线", "disk"},
+	{"psu", "电源", "给主板和硬盘等部件供电。", ""},
+	{"ram", "内存条", "临时保存运行中的程序和数据。", ""},
+	{"disk", "硬盘", "关机后仍能保存文件。", ""},
+	{"gpu", "显卡", "接入 PCIe 插槽，处理并输出画面。", ""},
+	{"screen", "显示器", "接收并显示显卡输出的画面。", ""},
+	{"keyboard", "键盘", "通过 USB 把按键输入送给电脑。", ""},
+	{"mouse", "鼠标", "通过 USB 传送移动、点击和滚动操作。", ""},
+	{"sata-wire", "SATA 数据线", "连接主板和硬盘，传输数据。", ""},
+	{"hdmi-wire", "HDMI 线", "连接显卡和显示器，传输画面。", ""},
 }
 
-var wiring = []string{"psu", "ram", "disk", "screen", "keyboard"}
+var wiring = itemIDs(parts)
+var partSeats = []string{"电源仓", "内存插槽", "硬盘托架", "PCIe 插槽", "显示器底座位", "键盘接驳位", "鼠标接驳位", "硬盘 SATA 数据接口", "显卡 HDMI 接口"}
+var legacyWiring = []string{"psu", "ram", "disk", "screen", "keyboard"}
+var legacyPortNames = []string{"24 针供电接口", "内存插槽", "SATA 数据接口", "HDMI 接口", "USB 接口"}
 
 type retrofitModule struct {
 	item
@@ -129,12 +177,35 @@ func isRetrofit(id string) bool {
 	return false
 }
 
-func legacyRetrofitAnswer(idx int, values []string) bool {
-	return idx == 5 && len(values) > 0 && find(jobs, values[0]).ID != ""
+func legacyActivity(idx int, values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	switch idx {
+	case 1:
+		if find(cases, values[0]).ID != "" {
+			return "生活搜寻"
+		}
+	case 2:
+		for _, entry := range research {
+			if entry.ID == values[0] {
+				return "小组研究"
+			}
+		}
+	case 4:
+		if slices.Equal(values, legacyWiring) {
+			return "电脑组装"
+		}
+	case 5:
+		if find(jobs, values[0]).ID != "" {
+			return "校园安全卫士"
+		}
+	}
+	return ""
 }
 
 func currentAnswer(idx int, answer *submission) *submission {
-	if answer != nil && !legacyRetrofitAnswer(idx, answer.Values) {
+	if answer != nil && legacyActivity(idx, answer.Values) == "" {
 		return answer
 	}
 	return nil
@@ -150,31 +221,12 @@ var robotModules = []item{
 	{"drive", "行走驱动", "让机器人前进、转向。", "track-drive"}, {"avoid", "红外避障", "发现前方障碍。", "infrared"}, {"voice", "语音播报", "说出提醒。", "speaker"}, {"warning", "灯光警示", "用亮灯提醒。", "beacon"}, {"track", "定位巡线", "沿路线巡逻。", "gps"}, {"chat", "无线通信", "向老师发送消息。", "radio"}, {"battery", "供电模块", "给各模块提供电能。", "battery"}, {"count", "人流检测", "估计通过的人数。", "chip"}, {"alarm", "一键报警", "按键后发出求助信号。", "alarm-button"},
 }
 
-type matchProject struct {
-	project
-	Pairs []item `json:"pairs"`
-}
-
-func matchingProjects() []matchProject {
-	projects := make([]matchProject, 0, len(research))
-	for index, entry := range research {
-		pairs := make([]item, 0, len(researchCorrect[index]))
-		for _, module := range entry.Modules {
-			if slices.Contains(researchCorrect[index], module.ID) {
-				pairs = append(pairs, module)
-			}
-		}
-		projects = append(projects, matchProject{entry, pairs})
-	}
-	return projects
-}
-
 var catalog = [stageCount]any{
 	map[string]any{"items": drone, "sequence": []string{"battery", "radio", "gps", "control", "power", "camera"}},
-	map[string]any{"items": cases},
-	map[string]any{"projects": matchingProjects()},
+	map[string]any{"projects": devices},
+	map[string]any{"questions": advantageQuestions, "options": advantageOptions, "solution": advantageSolution},
 	map[string]any{"colors": colors, "calls": lightPhases},
-	map[string]any{"ports": ports, "parts": parts},
+	map[string]any{"parts": parts, "wiring": wiring, "seats": partSeats},
 	map[string]any{"modules": retrofitModules},
 }
 
@@ -214,7 +266,7 @@ func validate(idx int, values []string, text string) string {
 	if len(values) > 12 || (text != "" && !validText(text, 300, true)) {
 		return "请检查选择，记录最多 300 字。"
 	}
-	if idx != 2 && idx != 3 && idx != 5 && text != "" {
+	if idx != 3 && idx != 5 && text != "" {
 		return "此活动不需要填写记录。"
 	}
 	switch idx {
@@ -223,23 +275,16 @@ func validate(idx int, values []string, text string) string {
 			return "装好六个模块，并完成一次联动试飞。"
 		}
 	case 1:
-		if len(values) < 3 || !unique(values) {
-			return "请找出至少三个模块化案例。"
-		}
-		for _, value := range values {
-			if find(cases[:6], value).ID == "" {
-				return "这里有不是模块化系统的例子，再想一想。"
-			}
-		}
-	case 2:
 		if len(values) > 0 {
-			for projectIdx, project := range research {
-				if project.ID == values[0] && match(values[1:], researchCorrect[projectIdx]) {
-					return ""
-				}
+			if device := deviceByID(values[0]); device != nil && match(values[1:], device.Solution) {
+				return ""
 			}
 		}
-		return "请连对三个模块与作用，完成说明卡。"
+		return "请根据设备功能，把模块选齐。"
+	case 2:
+		if !match(values, advantageSolution) {
+			return "请选齐模块化的优点。"
+		}
 	case 3:
 		if (len(values) != 4 && len(values) != 8) || !slices.Equal(values[1:4], lightCalls) || strings.TrimSpace(text) == "" {
 			return "请接好三处模块调用，写下你的发现。"
@@ -271,6 +316,7 @@ func validate(idx int, values []string, text string) string {
 
 func displayValues(idx int, values []string) []string {
 	labels := make([]string, 0, len(values))
+	legacy := legacyActivity(idx, values) != ""
 	for pos, value := range values {
 		var label string
 		switch idx {
@@ -280,8 +326,19 @@ func displayValues(idx int, values []string) []string {
 				label = "已观察联动"
 			}
 		case 1:
-			label = find(cases, value).Name
+			if legacy {
+				label = find(cases, value).Name
+			} else if device := deviceByID(values[0]); device != nil {
+				label = find(device.Modules, value).Name
+				if pos == 0 {
+					label = device.Name
+				}
+			}
 		case 2:
+			if !legacy {
+				label = find(advantageOptions, value).Name
+				break
+			}
 			for _, project := range research {
 				if project.ID == values[0] {
 					if pos == 0 {
@@ -309,11 +366,13 @@ func displayValues(idx int, values []string) []string {
 				label += "：" + color + " · " + strconv.FormatFloat(float64(setting.Duration)/1000, 'f', -1, 64) + " 秒"
 			}
 		case 4:
-			if pos < len(ports) {
-				label = find(parts, value).Name + " → " + ports[pos].Name
+			if legacy && pos < len(legacyPortNames) {
+				label = find(parts, value).Name + " → " + legacyPortNames[pos]
+			} else if pos < len(partSeats) {
+				label = find(parts, value).Name + " → " + partSeats[pos]
 			}
 		case 5:
-			if legacyRetrofitAnswer(idx, values) {
+			if legacy {
 				label = find(jobs, value).Name
 				if pos > 0 {
 					label = find(robotModules, value).Name

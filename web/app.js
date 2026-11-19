@@ -2,10 +2,10 @@
   'use strict';
 
   var root = document.getElementById('app');
-  var artURL = '/art.svg?v=7#';
+  var artURL = '/art.svg?v=8#';
   var stages = [
-    ['拆解无人机', 'drone'], ['生活搜寻', 'computer'], ['小组研究', 'cooker'],
-    ['彩灯编程', 'light'], ['电脑组装', 'board'], ['无人机改装', 'retrofit-drone']
+    ['探解无人机模块', 'drone'], ['分析身边的模块', 'cooker'], ['探寻模块化优势', 'drone'],
+    ['我来模块化实践', 'light'], ['我是模块组装师', 'board'], ['无人机改造畅想', 'retrofit-drone']
   ];
   var teacher = /^\/teacher\/?$/.test(location.pathname);
   var code = '';
@@ -15,6 +15,7 @@
   var stage = -1;
   var content = null;
   var drafts = {};
+  var deviceTrials = {};
   var clock;
   var flightStarted;
   var refreshTimer;
@@ -128,6 +129,7 @@
     roomSwitch = false;
     content = null;
     drafts = {};
+    deviceTrials = {};
     root.innerHTML = header('', '') + '<main class="wrap entry"><div class="entry-grid"><section class="entry-copy">' +
       '<h1>' + (teacher ? '教师控制台' : '模块化的应用') + '</h1><form id="access" class="access-form">' +
       field('教师口令', 'password', '', 'type="password" autocomplete="current-password" required maxlength="256"') +
@@ -168,6 +170,7 @@
       stage = -1;
       content = null;
       drafts = {};
+      deviceTrials = {};
       root.innerHTML = header('', '') + '<main class="wrap entry"><div class="entry-grid"><section class="entry-copy">' +
         '<h1 id="join-status" aria-live="polite">正在进入课堂</h1>' + feedback() + '</section><div class="blueprint entry-art">' + svg('drone') + '</div></div>' + stageTiles() + '</main>';
     }
@@ -292,12 +295,19 @@
 
   function draft() { return drafts[stage]; }
 
+  function fillSlots(values, anchors) {
+    return anchors.map(function (anchor, index) { return values[index] || ''; });
+  }
+
   function newDraft(answer, index) {
     var values = answer ? answer.values : [];
     var saved = {values: values.slice(), text: answer ? answer.text || '' : '', selected: '', playing: false};
     if (index === 0) { saved.flight = values.indexOf('flight') >= 0; saved.values = values.filter(function (value) { return value !== 'flight'; }); saved.step = -1; }
-    if (index === 1) saved.reveal = !!answer;
-    if (index === 2) { saved.selected = values[0] || ''; saved.values = values.slice(1); }
+    if (index === 1 || index === 2) {
+      saved.selected = index === 1 ? values[0] || content.projects[0].id : '';
+      saved.slots = index === 1 ? fillSlots(values.slice(1), find(content.projects, saved.selected).solution) : fillSlots(values, content.solution);
+      saved.values = [];
+    }
     if (index === 5) saved.step = 0;
     if (index === 3) {
       saved.color = values[0] || 'blue';
@@ -306,7 +316,7 @@
       saved.mode = answer ? 'new' : 'old';
       saved.lights = makeLightWorkspace(values);
     }
-    if (index === 4) { saved.slots = answer ? values.slice() : ['', '', '', '', '']; saved.on = !!answer; }
+    if (index === 4) { saved.slots = fillSlots(values, content.wiring); saved.on = !!answer; }
     return saved;
   }
 
@@ -355,13 +365,6 @@
     else values.push(value);
   }
 
-  function picked(info, action, isPicked, type, withArt, withInfo) {
-    var marked = isPicked || type.indexOf('checked') >= 0;
-    return btn((withArt ? svg(info.art) : '') + '<strong>' + esc(info.name) + '</strong>' +
-      (withInfo ? '<span class="option-info">' + esc(info.info) + '</span>' : '') + '<span aria-hidden="true" class="check">' + (marked ? '✓' : '+') + '</span>',
-    action, 'option ' + type + (isPicked ? ' picked' : ''), 'id="pick-' + esc(info.id) + '" ' + attr('value', info.id) + pressed(isPicked));
-  }
-
   var fittings = {
     power: {size: [66, 26], positions: [[32, 34], [218, 34], [32, 135], [219, 135]], seat: '机臂电机座'},
     gps: {size: [30, 19], positions: [[145, 41]], seat: '定位天线座'},
@@ -373,7 +376,11 @@
     ram: {size: [15, 61], positions: [[120, 56]], seat: '内存插槽'},
     disk: {size: [33, 54], positions: [[147, 91]], seat: '硬盘托架'},
     screen: {size: [106, 76], positions: [[202, 35]], seat: 'HDMI 显示器接驳位'},
-    keyboard: {size: [101, 29], positions: [[205, 129]], seat: 'USB 键盘接驳位'}
+    keyboard: {size: [101, 29], positions: [[195, 149]], seat: 'USB 键盘接驳位'},
+    gpu: {size: [77, 24], positions: [[31, 105]], seat: 'PCIe 显卡插槽'},
+    mouse: {size: [24, 34], positions: [[279, 112]], seat: 'USB 鼠标接驳位'},
+    'sata-wire': {size: [33, 15], positions: [[107, 129]], seat: 'SATA 数据线接驳位'},
+    'hdmi-wire': {size: [22, 19], positions: [[179, 64]], seat: 'HDMI 线接驳位'}
   };
 
   function benchArt(part, variant, spinning) {
@@ -396,9 +403,10 @@
   }
 
   function assemblyRack(items, placed) {
-    return '<div class="bench-tray" aria-label="部件托盘">' + items.map(function (item) {
+    return '<div class="bench-tray' + (stage === 4 ? ' pc-tray' : '') + '" aria-label="部件托盘">' + items.map(function (item) {
       var installed = placed.indexOf(item.id) >= 0;
-      return btn('<span class="tray-illustration">' + benchArt(item.id, 'part') + '</span><strong>' + esc(item.name) + '</strong>' + (installed ? '<i aria-label="已装好">✓</i>' : ''), 'part',
+      var drawing = /-wire$/.test(item.id) ? svg('tray-' + item.id, 'bench-art') : benchArt(item.id, 'part');
+      return btn('<span class="tray-illustration">' + drawing + '</span><strong>' + esc(item.name) + '</strong>' + (installed ? '<i aria-label="已装好">✓</i>' : ''), 'part',
         'tray-piece' + (installed ? ' installed' : '') + (draft().selected === item.id ? ' picked' : ''),
         'id="pick-' + item.id + '" ' + (!installed ? attr('piece', item.id) : '') + ' ' + attr('value', item.id) + pressed(draft().selected === item.id));
     }).join('') + '</div>';
@@ -437,65 +445,46 @@
     var saved = draft();
     var label = saved.wrong && saved.notice ? '未装入' : active ? (saved.notice === 'mounted' ? '已装好：' : '') + active.name : fallback;
     var info = saved.wrong ? saved.notice : active ? active.info : '';
-    if (stage === 4 && active && !saved.wrong) info = ['电源给主板供电，准备启动。', '内存临时保存运行中的程序和数据。', '通过数据线传输文件，通过供电线获得电力。', 'HDMI 把电脑画面送到显示器。', 'USB 把按键输入送给电脑。'][computerParts.indexOf(active.id)];
     return '<div class="bench-readout"><div class="bench-count"><strong>' + count + ' / ' + total + '</strong><span>已装好</span></div>' +
       '<div class="effect-bubble' + (saved.wrong ? ' bubble-error' : '') + (saved.notice === 'mounted' ? ' bubble-pop' : '') + '" aria-live="polite"><strong>' + esc(label) + '</strong>' +
       (info ? '<p>' + esc(info) + '</p>' : '') + '</div></div><div class="inline-actions bench-actions">' + controls + '</div>';
   }
 
+  function choiceSlots(items, heading) {
+    var saved = draft();
+    return '<section class="choice-board"><div class="choice-head"><h2>' + heading + '</h2><b>' + saved.slots.filter(Boolean).length + ' / ' + saved.slots.length + '</b></div>' +
+      '<div class="choice-slots">' + saved.slots.map(function (value, index) {
+        var item = find(items, value);
+        return btn(item ? esc(item.name) : '<span aria-hidden="true">+</span>', 'drop', 'choice-slot' + (item ? ' filled' : ''),
+          'id="slot-' + index + '" ' + attr('drop', index) + ' aria-label="' + (item ? esc(item.name) + '，点此移除' : '空槽 ' + (index + 1)) + '"');
+      }).join('') + '</div><p class="local-feedback' + (saved.wrong ? ' error' : '') + '" role="status">' + esc(saved.notice || '') + '</p></section>';
+  }
+
+  function choiceTray(items, heading) {
+    var saved = draft();
+    return '<section class="choice-tray"><h2>' + heading + '</h2><div class="choice-rack">' + items.map(function (item) {
+      var placed = saved.slots.indexOf(item.id) >= 0;
+      var picked = saved.focus === item.id;
+      return btn(esc(item.name) + (placed ? ' <span aria-hidden="true">✓</span>' : ''), 'pick-choice', 'choice-piece' + (picked ? ' picked' : ''),
+        'id="pick-' + item.id + '" ' + attr('value', item.id) + pressed(picked) + (placed ? ' disabled' : ' ' + attr('piece', item.id)));
+    }).join('') + '</div></section>';
+  }
+
   function stageTwo() {
     var saved = draft();
-    var active = find(content.items, saved.selected);
-    if (!saved.reveal) return '<div class="blueprint blank-stage">' + svg('computer', 'showcase') + svg('bike', 'showcase') + svg('vacuum', 'showcase') + '</div><div class="inline-actions">' + btn('打开案例箱', 'reveal', 'button primary') + '</div>';
-    return '<p class="instruction">找出至少三个能拆成不同功能模块的例子。</p><div class="case-grid">' + content.items.map(function (info) {
-      return picked(info, 'case', has(info.id), 'case-card', true, false);
-    }).join('') + '</div><div class="readout"><div>' + (active ? '<b>' + esc(active.name) + '</b><span>' + esc(active.info) + '</span>' : '<b>已选 ' + saved.values.length + ' 项</b>') + '</div></div>';
+    var project = find(content.projects, saved.selected);
+    return '<div class="device-tabs" aria-label="选择设备">' + content.projects.map(function (item) {
+      return btn(esc(item.name), 'project', 'button device-tab', 'id="pick-' + item.id + '" ' + attr('value', item.id) + pressed(project === item));
+    }).join('') + '</div><p class="instruction">读一读设备能做什么，把需要的模块拖入空槽，也可以点选。</p>' +
+      '<div class="device-workbench"><div class="device-profile">' + svg(project.art) + '<div><h2>' + esc(project.name) + '</h2><p>' + esc(project.info) + '</p></div></div>' +
+      choiceSlots(project.modules, '已选模块') + '</div>' + choiceTray(project.modules, '模块清单');
   }
 
   function stageThree() {
-    var saved = draft();
-    var project = find(content.projects, saved.selected);
-    return '<div class="group-bar"><div class="group-tabs" aria-label="研究小组">' + content.projects.map(function (info) {
-      return btn(esc(info.group), 'project', 'button tab' + (saved.selected === info.id ? ' active' : ''), 'id="pick-' + info.id + '" ' + attr('value', info.id) + pressed(saved.selected === info.id));
-    }).join('') + '</div>' + btn('抽一个', 'random', 'button secondary', 'id="random"') + '</div>' + (!project ?
-      '<div class="blank-stage blueprint">' + content.projects.slice(0, 3).map(function (item) { return svg(item.art, 'showcase'); }).join('') + '</div>' :
-      '<div class="research-product">' + svg(project.art) + '<div><h2>' + esc(project.name) + '</h2><p>' + esc(project.info) + '</p></div></div>' +
-      '<p class="instruction">把模块连到它的作用，也可以依次点选两端。</p><div class="match-board" id="match-board"><svg class="match-wires" id="match-wires" aria-hidden="true"></svg>' +
-      '<div class="match-list"><h3>模块名称</h3>' + project.pairs.map(function (item) {
-        return btn(esc(item.name), 'pair-source', 'match-end source' + (has(item.id) ? ' linked' : '') + (saved.focus === item.id ? ' picked' : ''),
-          'id="pick-' + item.id + '" ' + attr('value', item.id) + (has(item.id) ? ' disabled' : ' draggable="true" ' + attr('piece', item.id)) + pressed(saved.focus === item.id));
-      }).join('') + '</div><div class="match-list"><h3>模块作用</h3>' + [1, 2, 0].map(function (index) {
-        var item = project.pairs[index];
-        return btn(esc(item.info), 'drop', 'match-end destination' + (has(item.id) ? ' linked' : ''), 'id="slot-' + item.id + '" ' + attr('drop', item.id) + (has(item.id) ? ' disabled' : ''));
-      }).join('') + '</div></div><p class="local-feedback' + (saved.wrong ? ' error' : '') + '" aria-live="polite">' + esc(saved.notice || '') + '</p>' +
-      '<section class="module-sheet"><div class="sheet-head"><h3>模块说明卡</h3><b>' + saved.values.length + ' / ' + project.pairs.length + '</b></div>' +
-      '<dl>' + project.pairs.map(function (item) {
-        return has(item.id) ? '<div class="sheet-entry"><dt>' + esc(item.name) + '</dt><dd>' + esc(item.info) + '</dd></div>' : '';
-      }).join('') + '</dl></section>' +
-      textField('小组发现（选填）', saved.text, '这些模块如何配合？'));
-  }
-
-  function drawWires() {
-    var board = id('match-board');
-    if (!board) return;
-    var frame = board.getBoundingClientRect();
-    var wires = id('match-wires');
-    wires.setAttribute('viewBox', '0 0 ' + frame.width + ' ' + frame.height);
-    while (wires.firstChild) wires.removeChild(wires.firstChild);
-    Array.prototype.forEach.call(board.querySelectorAll('.source.linked'), wire);
-    function wire(node) {
-      var target = id('slot-' + node.getAttribute('data-value'));
-      var from = node.getBoundingClientRect();
-      var to = target.getBoundingClientRect();
-      var startX = from.right - frame.left;
-      var startY = from.top + from.height / 2 - frame.top;
-      var endX = to.left - frame.left;
-      var endY = to.top + to.height / 2 - frame.top;
-      var middle = (endX + startX) / 2;
-      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', 'M' + startX + ' ' + startY + 'C' + middle + ' ' + startY + ' ' + middle + ' ' + endY + ' ' + endX + ' ' + endY);
-      wires.appendChild(path);
-    }
+    return '<ol class="advantage-questions" aria-label="想一想">' + content.questions.map(function (question, index) {
+      return '<li><span aria-hidden="true">' + pad(index + 1) + '</span><p>' + esc(question) + '</p></li>';
+    }).join('') + '</ol><p class="instruction">从下方拖入你认为正确的答案，也可以点选。</p>' +
+      choiceSlots(content.options, '模块化有哪些优点？') + choiceTray(content.options, '备选答案');
   }
 
   var lightTimes = [500, 1000, 1500, 2000];
@@ -642,20 +631,19 @@
     });
   }
 
-  var computerParts = ['psu', 'ram', 'disk', 'screen', 'keyboard'];
-
   function stageFive() {
     var saved = draft();
     var active = find(content.parts, saved.focus || saved.selected);
+    var cables = {psu: ['psu'], keyboard: ['keyboard'], mouse: ['mouse'], disk: ['disk'], 'sata-wire': ['sata-wire', 'disk'], 'hdmi-wire': ['hdmi-wire', 'gpu', 'screen']};
     return '<p class="instruction">把部件拖进对应空槽，再按电源开机。</p>' + assemblyRack(content.parts, saved.slots) +
       '<div class="assembly-board pc-board' + (saved.on ? ' booted' : '') + (saved.playing ? ' starting' : '') + '"><div class="bench-device">' +
       svg('pc-workbench', 'assembly-art') + '<div class="bench-layer cpu-fan"><svg class="assembly-art" viewBox="57 64 32 32" aria-hidden="true" focusable="false">' +
       '<use xlink:href="' + artURL + 'pc-fan" width="320" height="200"></use></svg></div>' + (saved.on ? svg('pc-leds', 'assembly-art') : '') +
-      computerParts.map(function (part, index) {
-        return saved.slots[index] && part !== 'ram' ? svg('cable-' + part, 'assembly-art') : '';
-      }).join('') + computerParts.map(function (part, index) {
+      Object.keys(cables).map(function (part) {
+        return cables[part].every(function (end) { return saved.slots.indexOf(end) >= 0; }) ? svg('cable-' + part, 'assembly-art') : '';
+      }).join('') + content.wiring.map(function (part, index) {
         return sockets(find(content.parts, part), String(index), !!saved.slots[index]);
-      }).join('') + '</div></div>' + assemblyReadout(active, saved.playing ? '风扇转动，正在开机' : saved.on ? '开机成功' : '等待安装', saved.slots.filter(Boolean).length, 5,
+      }).join('') + '</div></div>' + assemblyReadout(active, saved.playing ? '风扇转动，正在开机' : saved.on ? '开机成功' : '等待安装', saved.slots.filter(Boolean).length, content.wiring.length,
         btn(saved.playing ? '开机中…' : saved.on ? '已开机' : '按下电源', 'boot', 'button primary', 'id="boot"' + (saved.on ? ' disabled' : '')) +
         btn('拆下全部', 'reset', 'button secondary', 'id="reset"' + (saved.playing ? ' disabled' : '')));
   }
@@ -836,14 +824,13 @@
     if (!content || !state || stage < 0) return;
     var activities = [stageOne, stageTwo, stageThree, stageFour, stageFive, stageSix];
     id('stage').innerHTML = title(stage) + activities[stage]() + '<div class="stage-footer">' + btn(state.done[stage] ? '更新记录' : '提交记录', 'submit-stage', 'button primary',
-      'id="submit-stage"' + (submitting || (stage === 1 && !draft().reveal) || draft().playing ? ' disabled' : '')) + feedback() + '</div>';
+      'id="submit-stage"' + (submitting || draft().playing ? ' disabled' : '')) + feedback() + '</div>';
     if (stage === 0 || stage === 4) fitBoard(id('stage'));
     if (stage === 0 && draft().playing) {
       var flying = draft();
       animateFlight(id('stage'), flightStarted, function () { flying.playing = false; flying.flight = true; renderStage('fly'); });
     }
     if (focus && id(focus) && !id(focus).disabled && document.activeElement !== id(focus)) id(focus).focus();
-    if (stage === 2) drawWires();
     if (stage === 3) syncLightPreview(draft(), content.calls);
     if (stage === 5) {
       var saved = draft();
@@ -861,7 +848,11 @@
     var saved = draft();
     var values = saved.values.slice();
     if (stage === 0 && saved.flight) values.push('flight');
-    if (stage === 2) values.unshift(saved.selected);
+    if (stage === 1 || stage === 2) {
+      if (saved.slots.indexOf('') >= 0) { message(stage === 1 ? '请把设备需要的模块选齐。' : '请把模块化的优点选齐。', 'error'); return; }
+      values = saved.slots.slice();
+      if (stage === 1) values.unshift(saved.selected);
+    }
     if (stage === 3) {
       if (saved.playing || !saved.lights.shared || values.length !== 3) { message('先接好三处模块调用，再提交。', 'error'); return; }
       values = [saved.color].concat(values.sort(), saved.lights.direct.concat(saved.lights.shared).map(lightValues));
@@ -876,7 +867,7 @@
     var origin = generation;
     api('POST', studentURL() + '/activity/' + (stage + 1), {values: values, text: saved.text}, function (status, data) {
       submitting = false;
-      if (id('submit-stage')) id('submit-stage').disabled = draft().playing || (stage === 1 && !draft().reveal);
+      if (id('submit-stage')) id('submit-stage').disabled = draft().playing;
       if (status === 200) updateStudent(data);
       if (!state || origin !== generation) return;
       if (status === 200) { renderStage('submit-stage'); message('记录已交给老师。', 'success'); }
@@ -991,9 +982,14 @@
   }
 
   function compatible(value, target) {
-    if (stage === 0 || stage === 2) return value === target && !has(value);
+    if (stage === 0) return value === target && !has(value);
+    if (stage === 1 || stage === 2) {
+      var saved = draft();
+      var solution = stage === 1 ? find(content.projects, saved.selected).solution : content.solution;
+      return saved.slots[Number(target)] === '' && saved.slots.indexOf(value) < 0 && solution.indexOf(value) >= 0;
+    }
     if (stage === 3) return value === 'module' && draft().mode === 'new' && !!draft().lights.shared && !draft().playing && /^call-[123]$/.test(target) && !has(target);
-    if (stage === 4) return computerParts[Number(target)] === value && !draft().slots[Number(target)];
+    if (stage === 4) return !draft().on && content.wiring[Number(target)] === value && !draft().slots[Number(target)];
     return false;
   }
 
@@ -1001,11 +997,15 @@
     if (!content || !value) return;
     var saved = draft();
     if (!compatible(value, target)) {
-      if (stage !== 0 && stage !== 2 && stage !== 4) return;
+      if (stage !== 0 && stage !== 1 && stage !== 2 && stage !== 4) return;
       saved.wrong = true;
-      saved.notice = stage === 2 ? '作用没有对上，再连一次。' : stage === 4 ? '接头和这里的插槽不匹配，部件已回到托盘。' : '这里不是它的安装位，部件已回到托盘。';
+      if (stage === 1 || stage === 2) {
+        saved.notice = saved.slots[Number(target)] ? '这个槽已填好，试试其他空槽。' : stage === 1 ? '再读读设备的功能，换一个试试。' : '这不是模块化的优点，换一个试试。';
+      } else {
+        saved.notice = stage === 4 ? '这里不是它的接驳位，部件已回到托盘。' : '这里不是它的安装位，部件已回到托盘。';
+        saved.selected = '';
+      }
       saved.focus = '';
-      if (stage !== 2) saved.selected = '';
       renderStage('pick-' + value);
       var returned = id('pick-' + value);
       if (returned) returned.classList.add('returning');
@@ -1017,10 +1017,10 @@
       saved.focus = value;
       saved.notice = 'mounted';
       saved.selected = '';
-    } else if (stage === 2) {
-      saved.values.push(value);
+    } else if (stage === 1 || stage === 2) {
+      saved.slots[Number(target)] = value;
       saved.focus = '';
-      saved.notice = '连对了！说明卡已更新。';
+      saved.notice = saved.slots.indexOf('') < 0 ? (stage === 1 ? '模块选齐了！' : '优点选齐了！') : '';
     } else if (stage === 3) {
       saved.values.push(target);
       saved.selected = '';
@@ -1038,8 +1038,8 @@
   function bootComputer() {
     var saved = draft();
     if (saved.on) return;
-    if (saved.slots.indexOf('') >= 0) { message('还有接口没接上。', 'error'); return; }
-    if (saved.slots.join() !== computerParts.join()) { message('有接口接错了。对照部件的接头名称再试。', 'error'); return; }
+    if (saved.slots.indexOf('') >= 0) { message('还有部件或线缆没装好。', 'error'); return; }
+    if (saved.slots.join() !== content.wiring.join()) { message('有部件没放对位置。', 'error'); return; }
     saved.on = true;
     saved.playing = true;
     saved.focus = '';
@@ -1262,8 +1262,8 @@
     if (entry && entry.stage) {
       var count = entry.count || 0;
       activity = stages[entry.stage - 1][0];
-      progress = ['已装 ' + count + ' / 6', '已选 ' + count + ' 项', '已连 ' + count + ' / 3',
-        '已放 ' + count + ' / 3', '已装 ' + count + ' / 5', '已体验 ' + count + ' 个模块'][entry.stage - 1];
+      progress = ['已装 ' + count + ' / 6', '已选 ' + count + ' / ' + entry.total, '已选 ' + count + ' / ' + entry.total,
+        '已放 ' + count + ' / 3', '已装 ' + count + ' / ' + entry.total, '已体验 ' + count + ' 个模块'][entry.stage - 1];
       if (entry.done) progress += ' · 已提交';
       else if (entry.ready) progress = entry.stage === 1 ? '已试飞' : '已开机';
     }
@@ -1385,7 +1385,6 @@
     var controls = panel.querySelectorAll('button, textarea, select');
     Array.prototype.forEach.call(controls, function (control) { control.disabled = true; control.removeAttribute('draggable'); });
     if (index === 0 && incoming.playing) animateFlight(panel);
-    if (index === 2) drawWires();
     if (isLights) syncLightPreview(incoming, content.calls);
     if (index === 5) animateRetrofit(panel, incoming.playing);
     if (previousDraft) drafts[index] = previousDraft;
@@ -1404,14 +1403,24 @@
     navigate: function (button) { loadStage(Number(button.getAttribute('data-index')), true); },
     retry: function () { loadStage(stage, true); },
     fly: playFlight,
-    reveal: function () { draft().reveal = true; renderStage('pick-desktop'); },
-    'case': function (button, value) { toggle(value); draft().selected = value; renderStage(button.id); },
-    project: function (button, value) { if (draft().selected !== value) { drafts[stage] = newDraft(null, stage); draft().selected = value; } renderStage(button.id); },
-    random: function () {
-      var options = content.projects.filter(function (item) { return item.id !== draft().selected; });
-      actions.project({id: 'random'}, options[Math.floor(Math.random() * options.length)].id);
+    project: function (button, value) {
+      var saved = draft();
+      if (saved.selected === value) return;
+      deviceTrials[saved.selected] = saved;
+      drafts[stage] = deviceTrials[value] || newDraft({values: [value]}, stage);
+      draft().focus = '';
+      draft().notice = '';
+      draft().wrong = false;
+      renderStage(button.id);
     },
-    'pair-source': function (button, value) { draft().focus = draft().focus === value ? '' : value; draft().notice = ''; draft().wrong = false; renderStage(button.id); },
+    'pick-choice': function (button, value, event) {
+      var saved = draft();
+      saved.focus = saved.focus === value ? '' : value;
+      saved.notice = '';
+      saved.wrong = false;
+      var next = saved.slots.indexOf('');
+      renderStage(saved.focus && !event.detail && next >= 0 ? 'slot-' + next : button.id);
+    },
     'retrofit-install': function (button, value) {
       var saved = draft();
       var previous = saved.values.indexOf(value);
@@ -1453,10 +1462,20 @@
     },
     drop: function (button) {
       if (draft().playing) return;
-      var value = stage === 2 ? draft().focus : draft().selected;
+      var choice = stage === 1 || stage === 2;
+      var value = choice ? draft().focus : draft().selected;
+      var target = button.getAttribute('data-drop');
+      if (!value && choice && draft().slots[Number(target)]) {
+        var saved = draft();
+        saved.slots[Number(target)] = '';
+        saved.wrong = false;
+        saved.notice = '';
+        renderStage(button.id);
+        return;
+      }
       if (!value && button.hasAttribute('data-mounted')) { draft().focus = button.getAttribute('data-mounted'); draft().wrong = false; draft().notice = ''; renderStage(button.id); return; }
-      if (!value) { message(stage === 3 ? '先选「调用 闪一次灯」，再点这里。' : stage === 2 ? '先点左边的模块名称。' : '先选一个部件，再点对应空槽。'); return; }
-      place(value, button.getAttribute('data-drop'));
+      if (!value) { message(stage === 3 ? '先选「调用 闪一次灯」，再点这里。' : choice ? '先选择下方的一张卡片。' : '先选一个部件，再点对应空槽。'); return; }
+      place(value, target);
     },
     boot: bootComputer,
     reset: function () { drafts[stage] = newDraft(null, stage); renderStage('reset'); },
@@ -1512,7 +1531,7 @@
     if (!button || button.disabled) return;
     if (button.id === suppressPiece && event.detail && Date.now() < suppressClick) return;
     var action = actions[button.getAttribute('data-action')];
-    if (action) action(button, button.getAttribute('data-value'));
+    if (action) action(button, button.getAttribute('data-value'), event);
   });
 
   root.addEventListener('input', function (event) { if (!teacher && event.target.id === 'response' && draft()) { draft().text = event.target.value; queueFrame(); } });
@@ -1558,7 +1577,7 @@
     if (hoverSlot === target) return;
     if (hoverSlot) markSlot(hoverSlot, false);
     hoverSlot = target;
-    if (target && compatible(value, target.getAttribute('data-drop'))) markSlot(target, true);
+    if (target && ((stage === 1 || stage === 2) ? !target.classList.contains('filled') : compatible(value, target.getAttribute('data-drop')))) markSlot(target, true);
   }
   function markSlot(slot, active) {
     var nodes = slot.getAttribute('data-fit') === 'power' ? slot.parentNode.querySelectorAll('.fitting-power') : [slot];
@@ -1605,7 +1624,11 @@
       current.width = size.width;
       current.height = size.height;
       current.source = source;
-      touchGhost = source.cloneNode(true);
+      if (current.assembly && /-wire$/.test(current.name)) {
+        touchGhost = document.createElement('div');
+        touchGhost.innerHTML = benchArt(current.name, 'part');
+        touchGhost = touchGhost.firstChild;
+      } else touchGhost = source.cloneNode(true);
       touchGhost.removeAttribute('id');
       touchGhost.removeAttribute('data-piece');
       touchGhost.classList.add('touch-ghost');
@@ -1647,7 +1670,7 @@
 
   root.addEventListener('mousedown', function (event) {
     var piece = ancestor(event.target, 'data-piece');
-    if (teacher || finger || event.button !== 0 || !piece || (!piece.classList.contains('tray-piece') && !piece.classList.contains('light-pick'))) return;
+    if (teacher || finger || event.button !== 0 || !piece || (!piece.classList.contains('tray-piece') && !piece.classList.contains('light-pick') && !piece.classList.contains('choice-piece'))) return;
     mouseFinger = grab(piece, event);
   });
   window.addEventListener('mousemove', function (event) {
@@ -1693,7 +1716,6 @@
     finger = null;
   }, touchOptions);
 
-  window.addEventListener('resize', drawWires);
   if (teacher) listRooms();
   else join();
 }());

@@ -480,10 +480,7 @@ func results(room *classroom, idx int) []result {
 	items := make([]result, 0)
 	for _, person := range room.People {
 		if answer := person.Answers[idx]; answer != nil {
-			entry := result{Name: person.Name, Values: displayValues(idx, answer.Values), Text: answer.Text, At: answer.At}
-			if legacyRetrofitAnswer(idx, answer.Values) {
-				entry.Activity = legacyStageSix
-			}
+			entry := result{Name: person.Name, Values: displayValues(idx, answer.Values), Text: answer.Text, At: answer.At, Activity: legacyActivity(idx, answer.Values)}
 			items = append(items, entry)
 		}
 	}

@@ -392,7 +392,7 @@
     <path d="M53 58h41v45H53z" fill="url(#brushed)" stroke="#142b2e" stroke-width="1.2"/>
     <circle cx="73" cy="80" r="16.5" fill="#0f1b23" stroke="#a6b6bd"/>
     <path d="M29 51h11v12H29zm69 18h14v16H98z" fill="url(#graphite)" stroke="#687b77" stroke-width=".75"/>
-    <path d="M35 103h61v4H35zm0 8h54v4H35z" fill="#c9bfa9" stroke="#192d30" stroke-width=".7"/>
+    <path d="M35 103h61v4H35zm0 25h71v4H35z" fill="#c9bfa9" stroke="#192d30" stroke-width=".7"/>
     <path d="M102 114h14v6h-14zm18-68h16v6h-16zm17 12h3v56h-3z" fill="#c6c9c2" stroke="#25363c" stroke-width=".6"/>
     <path d="M62 49h20m-49 20v13m69 10v8" stroke="#c8c4a5" stroke-width="2.8" stroke-linecap="round" stroke-dasharray=".3 3.4"/>
     <path d="M21 129h79v35H21zM143 89h38v61h-38z" fill="url(#vents)" stroke="#8597a5" stroke-width="1.3"/>
@@ -460,10 +460,50 @@
     <path d="M12 7h50m-51 4h52m-53 4h54m-55 4h14m29 0h13m6-12h18m-17 4h18m-18 4h19m-18 4h19" stroke="#202d38" stroke-width="2.6" stroke-dasharray="3.1 1.25"/>
     <path d="M25 19h24" stroke="#202d38" stroke-width="2.6"/><path d="M6 25h89" stroke="#91a0ac" stroke-width=".5"/>
   </g>
+
+  <path id="shape-gpu" d="M1 3h67l5 4v4h3v9h-9v-3H53v6H21v-4H5l-4-4Z"/>
+  <g id="part-gpu">
+    <use xlink:href="#shape-gpu" fill="url(#graphite)" stroke="#91a3b0" stroke-width=".8"/>
+    <path d="M2 4h63l-5 4h-9l-5-2H9L5 9Z" fill="url(#brushed)"/>
+    <path d="M4 16h58l-2 2H8Z" fill="#476066"/><path d="M22 21h29" stroke="#ddba6b" stroke-width="2.4" stroke-dasharray=".75 .45"/>
+    <g fill="#121b25" stroke="#7d919a" stroke-width=".65"><circle cx="19" cy="11" r="6"/><circle cx="38" cy="11" r="6"/><circle cx="57" cy="11" r="6"/></g>
+    <g fill="none" stroke="#586e78" stroke-width="1.1" stroke-linecap="round"><path d="M15 8l8 6m-2-7-4 8m17-7 8 6m-2-7-4 8m17-7 8 6m-2-7-4 8"/></g>
+    <path d="M69 5h4v13h-4z" fill="url(#brushed)"/><path d="M71 10h3m-3 4h3" stroke="#202c38" stroke-width="1.2"/>
+  </g>
+  <path id="shape-mouse" d="M11 1h2c6 1 10 5 10 12v10c0 7-4 10-11 10S1 30 1 23V13C1 6 5 2 11 1Z"/>
+  <g id="part-mouse">
+    <use xlink:href="#shape-mouse" fill="url(#graphite)" stroke="#96a6b1" stroke-width=".75"/>
+    <path d="M11 1v12m-10 2q11-3 22 0" stroke="#a0aeb5" fill="none" stroke-width=".65"/>
+    <path d="M10 5q2-2 4 0v5q-2 2-4 0z" fill="url(#brushed)" stroke="#151e29" stroke-width=".7"/>
+    <path d="M5 20q-1 8 5 10m8-4 1-4" stroke="#84939c" fill="none" opacity=".6" stroke-width=".7"/>
+  </g>
+  <path id="shape-sata-wire" d="M1 2h9l4 3v1h16v2h2v5H14v1H2l-1-3Z"/>
+  <g id="part-sata-wire">
+    <use xlink:href="#shape-sata-wire" fill="#a5523d" stroke="#e1a78a" stroke-width=".75"/>
+    <path d="M14 8h18v3H14z" fill="#172632"/><path d="M4 5h4m-4 3h5m-5 3h5" stroke="#ebbc9a" stroke-width=".7"/>
+    <path d="M18 9h12" stroke="#debd79" stroke-width=".9" stroke-dasharray=".7 .8"/>
+  </g>
+  <path id="shape-hdmi-wire" d="M1 6h6V3h9l5 3v7l-5 3H7v-3H1Z"/>
+  <g id="part-hdmi-wire">
+    <use xlink:href="#shape-hdmi-wire" fill="url(#graphite)" stroke="#adc2cd" stroke-width=".8"/>
+    <path d="M2 7h6v5H2z" fill="url(#brushed)"/><path d="M10 5h5l4 2m-9 7h5l4-2" fill="none" stroke="#778c9e" stroke-width=".7"/>
+  </g>
+  <symbol id="tray-sata-wire" viewBox="0 0 320 200">
+    <path d="M77 60h144c29 0 30 34 1 34H105c-29 0-30 35 0 35h118" fill="none" stroke="#503431" stroke-width="18"/>
+    <path d="M77 60h144c29 0 30 34 1 34H105c-29 0-30 35 0 35h118" fill="none" stroke="#be7159" stroke-width="11"/>
+    <use xlink:href="#part-sata-wire" transform="translate(86 76) rotate(180) scale(2.25)"/><use xlink:href="#part-sata-wire" transform="translate(219 113) scale(2.25)"/>
+  </symbol>
+  <symbol id="tray-hdmi-wire" viewBox="0 0 320 200">
+    <path d="M64 79h144c39 0 39 54 0 54H107c-48 0-48-79 0-79h100" fill="none" stroke="#1a2632" stroke-width="13" stroke-linecap="round"/>
+    <path d="M78 77h130c37 0 37 52 0 52H107c-45 0-45-73 0-73h100" fill="none" stroke="#607583" stroke-width="3"/>
+    <use xlink:href="#part-hdmi-wire" transform="translate(28 57) scale(2.1)"/><use xlink:href="#part-hdmi-wire" transform="translate(250 76) rotate(180) scale(2.1)"/>
+  </symbol>
   <symbol id="cable-psu" viewBox="0 0 320 200"><path d="M91 152c21 0 20-25 18-34" stroke="#101820" stroke-width="5" fill="none"/><path d="M92 152c18 0 20-26 17-34" stroke="#82735d" stroke-width="1.5" fill="none"/></symbol>
-  <symbol id="cable-disk" viewBox="0 0 320 200"><path d="M163 142v6c0 13-16 12-23 4-5-5-11-9-11-32" fill="none" stroke="#17242c" stroke-width="4"/><path d="M163 142v6c0 12-15 11-22 3-5-6-12-9-12-31" fill="none" stroke="#bc7053" stroke-width="1.65"/></symbol>
-  <symbol id="cable-screen" viewBox="0 0 320 200"><path d="M191 63c10 0 5 39 25 39h31" stroke="#131c25" stroke-width="2.5" fill="none"/><path d="m187 62 5-1v5l-5-1Z" fill="#223441" stroke="#a1aeb5" stroke-width=".5"/></symbol>
-  <symbol id="cable-keyboard" viewBox="0 0 320 200"><path d="M191 122c24 0 42-29 57-16q8 7 7 28" stroke="#131c25" stroke-width="2.4" fill="none"/><path d="M187 120h6v4h-6z" fill="#223441" stroke="#a1aeb5" stroke-width=".5"/></symbol>
+  <symbol id="cable-disk" viewBox="0 0 320 200"><path d="M85 154c40 16 71 12 72-13" fill="none" stroke="#19252e" stroke-width="4"/><path d="M85 154c40 16 71 12 72-13" fill="none" stroke="#8b7b64" stroke-width="1.3"/></symbol>
+  <symbol id="cable-sata-wire" viewBox="0 0 320 200"><path d="M110 136c-6 15 33 37 55 17l1-10" fill="none" stroke="#4c2f2c" stroke-width="4.2"/><path d="M110 136c-6 15 33 37 55 17l1-10" fill="none" stroke="#cf8568" stroke-width="2.1"/></symbol>
+  <symbol id="cable-hdmi-wire" viewBox="0 0 320 200"><path d="M105 119c51 43 70 46 85-9v-33m9-4c9 0 5 35 27 42 13 4 26 5 27-10" stroke="#141f29" stroke-width="3.6" fill="none"/><path d="M105 118c51 43 70 46 84-9V77m11-5c9 0 5 35 27 42 13 4 25 5 26-10" stroke="#78919f" stroke-width=".85" fill="none"/></symbol>
+  <symbol id="cable-keyboard" viewBox="0 0 320 200"><path d="M191 122c23 0 38-6 47-5q11 0 7 34" stroke="#131c25" stroke-width="2.4" fill="none"/><path d="M187 120h6v4h-6z" fill="#223441" stroke="#a1aeb5" stroke-width=".5"/></symbol>
+  <symbol id="cable-mouse" viewBox="0 0 320 200"><path d="M191 127c34 16 55 2 64-15 9-17 36-17 36 1" stroke="#131c25" stroke-width="2.4" fill="none"/><path d="M187 125h6v4h-6z" fill="#223441" stroke="#a1aeb5" stroke-width=".5"/></symbol>
 
   <symbol id="computer-frame" viewBox="0 0 320 200" preserveAspectRatio="none">
     <path d="M19 31 37 16h185l8 16v141l-16 10H19z" fill="#12273a" stroke="#839caf" stroke-width="2"/>

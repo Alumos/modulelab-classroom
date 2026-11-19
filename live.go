@@ -22,7 +22,6 @@ type liveDraft struct {
 	Playing     bool            `json:"playing,omitempty"`
 	Flight      bool            `json:"flight,omitempty"`
 	Step        int             `json:"step"`
-	Reveal      bool            `json:"reveal,omitempty"`
 	Color       string          `json:"color,omitempty"`
 	Preview     int             `json:"preview"`
 	Mode        string          `json:"mode,omitempty"`
@@ -43,6 +42,7 @@ type seatProgress struct {
 	Seat  int  `json:"seat"`
 	Stage int  `json:"stage,omitempty"`
 	Count int  `json:"count,omitempty"`
+	Total int  `json:"total,omitempty"`
 	Ready bool `json:"ready,omitempty"`
 	Done  bool `json:"done,omitempty"`
 }
@@ -58,8 +58,9 @@ func progressFor(person *participant, frame *liveFrame) seatProgress {
 	switch frame.Stage {
 	case 1:
 		entry.Ready = frame.Draft.Flight
-	case 5:
-		entry.Ready = frame.Draft.On && !frame.Draft.Playing
+	case 2, 3, 5:
+		entry.Total = len(frame.Draft.Slots)
+		entry.Ready = frame.Stage == 5 && frame.Draft.On && !frame.Draft.Playing
 		entry.Count = 0
 		for _, part := range frame.Draft.Slots {
 			if part != "" {
@@ -121,6 +122,19 @@ func itemIDs(items []item) []string {
 	return keys
 }
 
+func validChoiceSlots(slots, solution []string) bool {
+	if len(slots) != len(solution) {
+		return false
+	}
+	used := make([]string, 0, len(slots))
+	for _, id := range slots {
+		if id != "" {
+			used = append(used, id)
+		}
+	}
+	return unique(used) && containsOnly(used, solution)
+}
+
 func validLive(stage int, draft liveDraft) bool {
 	if len(draft.Values) > 12 || !unique(draft.Values) || (draft.Text != "" && !validText(draft.Text, 300, true)) ||
 		(draft.Notice != "" && !validText(draft.Notice, 140, false)) {
@@ -133,14 +147,10 @@ func validLive(stage int, draft liveDraft) bool {
 	case 1:
 		return validItem(drone, draft.Selected) && validItem(drone, draft.Focus) && containsOnly(draft.Values, itemIDs(drone)) && draft.Step >= -1 && draft.Step <= 6
 	case 2:
-		return validItem(cases, draft.Selected) && containsOnly(draft.Values, itemIDs(cases))
+		device := deviceByID(draft.Selected)
+		return device != nil && validItem(device.Modules, draft.Focus) && validChoiceSlots(draft.Slots, device.Solution)
 	case 3:
-		for _, entry := range research {
-			if draft.Selected == entry.ID {
-				return validItem(entry.Modules, draft.Focus) && containsOnly(draft.Values, itemIDs(entry.Modules))
-			}
-		}
-		return draft.Selected == "" && len(draft.Values) == 0
+		return validItem(advantageOptions, draft.Focus) && validChoiceSlots(draft.Slots, advantageSolution)
 	case 4:
 		if lights := draft.Lights; lights != nil {
 			if len(lights.Direct) != len(lightPhases) || (lights.Shared == nil && len(draft.Values) != 0) ||
@@ -157,7 +167,15 @@ func validLive(stage int, draft liveDraft) bool {
 			(draft.Mode == "" || draft.Mode == "old" || draft.Mode == "new") && draft.Preview >= -1 && draft.Preview <= 3 &&
 			containsOnly(draft.Values, lightCalls) && containsOnly([]string{draft.LightStep}, []string{"", "output", "wait", "off", "skip", "done"})
 	case 5:
-		return len(draft.Slots) == len(wiring) && containsOnly(draft.Slots, append(itemIDs(parts), "")) && validItem(parts, draft.Selected) && validItem(parts, draft.Focus)
+		if len(draft.Slots) != len(wiring) || !validItem(parts, draft.Selected) || !validItem(parts, draft.Focus) {
+			return false
+		}
+		for index, part := range draft.Slots {
+			if part != wiring[index] && (part != "" || draft.On) {
+				return false
+			}
+		}
+		return !draft.Playing || draft.On
 	case 6:
 		for _, id := range draft.Values {
 			if !isRetrofit(id) {

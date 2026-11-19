@@ -101,10 +101,10 @@ func TestClassroomJourney(t *testing.T) {
 
 	answers := []any{
 		testAnswer([]string{"camera", "power", "control", "gps", "radio", "battery", "flight"}, ""),
-		testAnswer([]string{"desktop", "phone", "bike"}, ""),
-		testAnswer([]string{"chair", "heat", "massage", "music"}, "模块可分别检测。"),
+		testAnswer([]string{"device-chair", "massage", "music", "heat", "air", "panel"}, ""),
+		testAnswer([]string{"parallel", "reuse", "unit-test", "repair", "combine"}, ""),
 		testAnswer([]string{"amber", "call-1", "call-2", "call-3"}, "只换一次，三处都变了。"),
-		testAnswer([]string{"psu", "ram", "disk", "screen", "keyboard"}, ""),
+		testAnswer([]string{"psu", "ram", "disk", "gpu", "screen", "keyboard", "mouse", "sata-wire", "hdmi-wire"}, ""),
 		testAnswer([]string{"wash", "cargo", "thermal"}, "=换上不同模块，能做不同的事。"),
 	}
 	for idx, answer := range answers {
@@ -121,7 +121,7 @@ func TestClassroomJourney(t *testing.T) {
 		t.Fatalf("incorrect totals: %s", dashboard.Body.String())
 	}
 	export := exercise(t, app, "GET", teacherRoom+"/export", nil, teacher, 200)
-	if !strings.Contains(export.Body.String(), "无人机改装") || !strings.Contains(export.Body.String(), "运输挂钩 · 运送茶叶") || !strings.Contains(export.Body.String(), "'=换上") {
+	if !strings.Contains(export.Body.String(), "无人机改造畅想") || !strings.Contains(export.Body.String(), "运输挂钩 · 运送茶叶") || !strings.Contains(export.Body.String(), "'=换上") {
 		t.Fatal("CSV missing activity or escaped cell")
 	}
 	exercise(t, app, "POST", teacherRoom+"/activity/6", map[string]bool{"open": false}, teacher, 200)
@@ -261,6 +261,73 @@ func TestLiveProjection(t *testing.T) {
 	}
 }
 
+func TestUpdatedActivities(t *testing.T) {
+	app, err := newServer(t.TempDir(), "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	teacher := exercise(t, app, "POST", "/api/teacher/login", map[string]string{"password": "2026"}, nil, 200).Result().Cookies()[0]
+	exercise(t, app, "POST", "/api/teacher/rooms", map[string]string{"title": "新活动"}, teacher, 201)
+	student := exercise(t, app, "POST", "/api/student/current", map[string]string{"device": token(32)}, nil, 201).Result().Cookies()[0]
+	room := app.rooms[app.active]
+	teacherPath := "/api/teacher/rooms/" + app.active
+	studentPath := "/api/student/" + app.active
+	legacy := map[int][]string{1: {"desktop", "phone", "bike"}, 2: {"chair", "heat", "massage", "music"}, 4: legacyWiring}
+	for idx, answer := range legacy {
+		path := fmt.Sprintf("/activity/%d", idx+1)
+		for _, person := range room.People {
+			person.Answers[idx] = &submission{Values: answer}
+		}
+		exercise(t, app, "POST", teacherPath+path, map[string]bool{"open": true}, teacher, 200)
+		activity := exercise(t, app, "GET", studentPath+path, nil, student, 200).Body.String()
+		if !strings.Contains(activity, `"answer":null`) {
+			t.Fatalf("legacy answer should not prefill %s", path)
+		}
+		exercise(t, app, "POST", studentPath+path, testAnswer(answer, ""), student, 400)
+	}
+	export := exercise(t, app, "GET", teacherPath+"/export", nil, teacher, 200).Body.String()
+	for _, label := range []string{"生活搜寻,台式电脑", "小组研究,家居组 / 按摩椅", "电脑组装,电源 → 24 针供电接口"} {
+		if !strings.Contains(export, label) {
+			t.Fatalf("legacy export is missing %q", label)
+		}
+	}
+	for _, device := range devices {
+		if len(device.Solution) < 5 || len(device.Modules)-len(device.Solution) < 3 || !containsOnly(device.Solution, itemIDs(device.Modules)) {
+			t.Fatalf("incomplete exercise for %s", device.Name)
+		}
+	}
+	for _, invalid := range [][]string{
+		{"device-chair", "heat", "massage"},
+		{"device-chair", "heat", "massage", "music", "air", "stitch"},
+		{"device-chair", "heat", "massage", "music", "air", "heat"},
+	} {
+		exercise(t, app, "POST", studentPath+"/activity/2", testAnswer(invalid, ""), student, 400)
+	}
+	exercise(t, app, "POST", studentPath+"/activity/3", testAnswer([]string{"combine", "repair", "parallel", "reuse", "cost"}, ""), student, 400)
+	badSlots := slices.Clone(wiring)
+	badSlots[7], badSlots[8] = badSlots[8], badSlots[7]
+	exercise(t, app, "POST", studentPath+"/activity/5", testAnswer(badSlots, ""), student, 400)
+	frame := liveFrame{Stage: 2, Draft: liveDraft{Selected: "device-phone", Slots: []string{"", "lens", "", "", "", ""}}}
+	exercise(t, app, "POST", studentPath+"/live", frame, student, 204)
+	view := exercise(t, app, "GET", teacherPath+"/live?seat=1", nil, teacher, 200).Body.String()
+	if !strings.Contains(view, `"done":false`) || !strings.Contains(view, `"slots":["","lens","","","",""]`) {
+		t.Fatal("projection should display the live slot, not the legacy answer")
+	}
+	seats := exercise(t, app, "GET", teacherPath+"/live-seats", nil, teacher, 200).Body.String()
+	if !strings.Contains(seats, `"stage":2,"count":1,"total":6`) || strings.Contains(seats, "lens") {
+		t.Fatal("seat summary should expose only the count and total")
+	}
+	for _, draft := range []liveDraft{{Slots: []string{"combine", "", "combine", "", ""}}, {Slots: []string{"combine", "", "cost", "", ""}}} {
+		exercise(t, app, "POST", studentPath+"/live", liveFrame{Stage: 3, Draft: draft}, student, 400)
+	}
+	if !validLive(3, liveDraft{Slots: []string{"", "reuse", "", "", ""}}) || !validLive(5, liveDraft{Slots: wiring, On: true, Playing: true}) {
+		t.Fatal("the new activities must accept valid live frames")
+	}
+	if validLive(5, liveDraft{Slots: badSlots}) || validLive(5, liveDraft{Slots: make([]string, len(wiring)), On: true}) {
+		t.Fatal("projection should reject swapped cables and an incomplete boot")
+	}
+}
+
 func TestRetrofitWorkspace(t *testing.T) {
 	app, err := newServer(t.TempDir(), "", false)
 	if err != nil {
@@ -378,8 +445,8 @@ func TestClearCurrentStudents(t *testing.T) {
 	const join = "/api/student/current"
 	device := map[string]string{"device": token(32)}
 	reset := map[string]uint64{"reset": 0}
-	answer := testAnswer([]string{"desktop", "phone", "bike"}, "")
-	frame := liveFrame{Stage: 2, Draft: liveDraft{Values: []string{"desktop"}}}
+	answer := testAnswer([]string{"device-chair", "heat", "massage", "music", "air", "panel"}, "")
+	frame := liveFrame{Stage: 2, Draft: liveDraft{Selected: "device-chair", Slots: []string{"heat", "", "", "", ""}}}
 	exercise(t, app, "POST", classes, map[string]string{"title": "之前的课"}, teacher, 201)
 	archived := app.active
 	exercise(t, app, "POST", classes+"/"+archived+"/activity/2", map[string]bool{"open": true}, teacher, 200)
