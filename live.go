@@ -122,19 +122,6 @@ func itemIDs(items []item) []string {
 	return keys
 }
 
-func validChoiceSlots(slots, solution []string) bool {
-	if len(slots) != len(solution) {
-		return false
-	}
-	used := make([]string, 0, len(slots))
-	for _, id := range slots {
-		if id != "" {
-			used = append(used, id)
-		}
-	}
-	return unique(used) && containsOnly(used, solution)
-}
-
 func validLive(stage int, draft liveDraft) bool {
 	if len(draft.Values) > 12 || !unique(draft.Values) || (draft.Text != "" && !validText(draft.Text, 300, true)) ||
 		(draft.Notice != "" && !validText(draft.Notice, 140, false)) {
@@ -148,9 +135,9 @@ func validLive(stage int, draft liveDraft) bool {
 		return validItem(drone, draft.Selected) && validItem(drone, draft.Focus) && containsOnly(draft.Values, itemIDs(drone)) && draft.Step >= -1 && draft.Step <= 6
 	case 2:
 		device := deviceByID(draft.Selected)
-		return device != nil && validItem(device.Modules, draft.Focus) && validChoiceSlots(draft.Slots, device.Solution)
+		return device != nil && validItem(device.Modules, draft.Focus) && validChoiceSlots(draft.Slots, device.SlotCount, device.Modules)
 	case 3:
-		return validItem(advantageOptions, draft.Focus) && validChoiceSlots(draft.Slots, advantageSolution)
+		return validItem(advantageOptions, draft.Focus) && validChoiceSlots(draft.Slots, advantageSlotCount, advantageOptions)
 	case 4:
 		if lights := draft.Lights; lights != nil {
 			if len(lights.Direct) != len(lightPhases) || (lights.Shared == nil && len(draft.Values) != 0) ||

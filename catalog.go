@@ -61,26 +61,26 @@ var research = []project{
 
 type deviceProject struct {
 	item
-	Modules  []item   `json:"modules"`
-	Solution []string `json:"solution"`
+	Modules   []item `json:"modules"`
+	SlotCount int    `json:"slotCount"`
 }
 
 var devices = []deviceProject{
 	{item{"device-chair", "按摩椅", "这台按摩椅能揉捏肩背、加热靠背，还能通过充放气挤压小腿。扶手上可以选择按摩程序，也能用蓝牙播放音乐。", "chair"},
 		choices("heat:加热模块", "massage:揉捏驱动模块", "cool:冷风制冷模块", "music:蓝牙音频模块", "stitch:一根缝线", "air:气囊按摩模块", "panel:按键控制模块", "water:净水过滤模块"),
-		[]string{"heat", "massage", "music", "air", "panel"}},
+		5},
 	{item{"device-phone", "智能手机", "这部手机可以显示画面并响应触摸，能拍照、通过移动网络通话和上网，也能播放声音、导航。它充好电后可以带出门使用。", "phone"},
 		choices("projector:投影模块", "lens:摄像模块", "mobile:移动通信模块", "screen:触控显示模块", "batt:电池模块", "screw:一颗螺丝", "audio:音频模块", "location:卫星定位模块", "heat:加热模块"),
-		[]string{"lens", "mobile", "screen", "batt", "audio", "location"}},
+		6},
 	{item{"device-rice", "智能电饭锅", "这台电饭锅能给米饭加热，并持续检测锅里的温度。可以按键选择煮饭或保温程序，屏幕会显示剩余时间。", "cooker"},
 		choices("heater:加热模块", "sensor:温度检测模块", "lens:摄像模块", "program:程序控制模块", "tag:品牌贴纸", "keys:按键输入模块", "display:时间显示模块", "location:卫星定位模块"),
-		[]string{"heater", "sensor", "program", "keys", "display"}},
+		5},
 	{item{"device-car", "电动汽车", "这辆电动汽车可以前进、转弯、刹车，能用车灯照明和提示转向。电池为车辆供电，空调能调节车内温度。", "car"},
 		choices("paint:车门油漆", "drive:电机驱动模块", "brake:制动模块", "stereo:蓝牙音响模块", "lights:照明信号模块", "steer:转向模块", "battery:动力电池模块", "ac:空调模块", "clean:吸尘模块"),
-		[]string{"drive", "steer", "brake", "lights", "battery", "ac"}},
+		6},
 	{item{"device-vacuum", "扫地机器人", "这台扫地机器人会沿路线移动，先用刷子扫起灰尘，再把灰尘吸进尘盒。它遇到障碍会绕开，还会定位并找到充电座。", "vacuum"},
 		choices("air:空气加湿模块", "wheels:行走模块", "brush:滚刷清扫模块", "shell:外壳的一角", "suction:吸尘模块", "avoid:避障模块", "charge:充电模块", "location:定位导航模块", "heat:加热模块"),
-		[]string{"wheels", "brush", "suction", "avoid", "charge", "location"}},
+		6},
 }
 
 func choices(entries ...string) []item {
@@ -108,7 +108,8 @@ var advantageQuestions = []string{
 }
 
 var advantageOptions = choices("whole:坏了就要整机更换", "combine:灵活组合", "parallel:并行开发", "cost:一定更便宜", "reuse:重复使用", "repair:维护扩展", "untested:装好就不用测试", "unit-test:单独测试", "any-fit:任意部件都能互换")
-var advantageSolution = []string{"combine", "repair", "parallel", "reuse", "unit-test"}
+
+const advantageSlotCount = 5
 
 var colors = []item{{"blue", "蓝色", "", ""}, {"amber", "橙色", "", ""}, {"green", "绿色", "", ""}, {"purple", "紫色", "", ""}, {"red", "红色", "", ""}}
 var lightPhases = []string{"起飞前", "航拍中", "降落后"}
@@ -224,7 +225,7 @@ var robotModules = []item{
 var catalog = [stageCount]any{
 	map[string]any{"items": drone, "sequence": []string{"battery", "radio", "gps", "control", "power", "camera"}},
 	map[string]any{"projects": devices},
-	map[string]any{"questions": advantageQuestions, "options": advantageOptions, "solution": advantageSolution},
+	map[string]any{"questions": advantageQuestions, "options": advantageOptions, "slotCount": advantageSlotCount},
 	map[string]any{"colors": colors, "calls": lightPhases},
 	map[string]any{"parts": parts, "wiring": wiring, "seats": partSeats},
 	map[string]any{"modules": retrofitModules},
@@ -262,6 +263,22 @@ func match(values, allowed []string) bool {
 	return true
 }
 
+func validChoiceSlots(slots []string, count int, options []item) bool {
+	if len(slots) != count {
+		return false
+	}
+	for index, id := range slots {
+		if id != "" && (find(options, id).ID == "" || slices.Contains(slots[:index], id)) {
+			return false
+		}
+	}
+	return true
+}
+
+func validChoiceAnswer(slots []string, count int, options []item) bool {
+	return validChoiceSlots(slots, count, options) && slices.ContainsFunc(slots, func(value string) bool { return value != "" })
+}
+
 func validate(idx int, values []string, text string) string {
 	if len(values) > 12 || (text != "" && !validText(text, 300, true)) {
 		return "请检查选择，记录最多 300 字。"
@@ -276,14 +293,14 @@ func validate(idx int, values []string, text string) string {
 		}
 	case 1:
 		if len(values) > 0 {
-			if device := deviceByID(values[0]); device != nil && match(values[1:], device.Solution) {
+			if device := deviceByID(values[0]); device != nil && validChoiceAnswer(values[1:], device.SlotCount, device.Modules) {
 				return ""
 			}
 		}
-		return "请根据设备功能，把模块选齐。"
+		return "请至少放入一张模块卡片再提交。"
 	case 2:
-		if !match(values, advantageSolution) {
-			return "请选齐模块化的优点。"
+		if !validChoiceAnswer(values, advantageSlotCount, advantageOptions) {
+			return "请至少放入一张答案卡片再提交。"
 		}
 	case 3:
 		if (len(values) != 4 && len(values) != 8) || !slices.Equal(values[1:4], lightCalls) || strings.TrimSpace(text) == "" {

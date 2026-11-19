@@ -292,36 +292,58 @@ func TestUpdatedActivities(t *testing.T) {
 		}
 	}
 	for _, device := range devices {
-		if len(device.Solution) < 5 || len(device.Modules)-len(device.Solution) < 3 || !containsOnly(device.Solution, itemIDs(device.Modules)) {
+		if device.SlotCount < 5 || len(device.Modules)-device.SlotCount < 3 || !unique(itemIDs(device.Modules)) {
 			t.Fatalf("incomplete exercise for %s", device.Name)
 		}
 	}
 	for _, invalid := range [][]string{
 		{"device-chair", "heat", "massage"},
-		{"device-chair", "heat", "massage", "music", "air", "stitch"},
+		{"device-chair", "", "", "", "", ""},
+		{"device-chair", "heat", "massage", "music", "air", "screen"},
 		{"device-chair", "heat", "massage", "music", "air", "heat"},
 	} {
 		exercise(t, app, "POST", studentPath+"/activity/2", testAnswer(invalid, ""), student, 400)
 	}
-	exercise(t, app, "POST", studentPath+"/activity/3", testAnswer([]string{"combine", "repair", "parallel", "reuse", "cost"}, ""), student, 400)
+	exercise(t, app, "POST", studentPath+"/activity/3", testAnswer([]string{"combine", "repair", "parallel", "reuse", "unknown"}, ""), student, 400)
 	badSlots := slices.Clone(wiring)
 	badSlots[7], badSlots[8] = badSlots[8], badSlots[7]
 	exercise(t, app, "POST", studentPath+"/activity/5", testAnswer(badSlots, ""), student, 400)
-	frame := liveFrame{Stage: 2, Draft: liveDraft{Selected: "device-phone", Slots: []string{"", "lens", "", "", "", ""}}}
+	frame := liveFrame{Stage: 2, Draft: liveDraft{Selected: "device-phone", Slots: []string{"", "screw", "", "", "", ""}}}
 	exercise(t, app, "POST", studentPath+"/live", frame, student, 204)
 	view := exercise(t, app, "GET", teacherPath+"/live?seat=1", nil, teacher, 200).Body.String()
-	if !strings.Contains(view, `"done":false`) || !strings.Contains(view, `"slots":["","lens","","","",""]`) {
-		t.Fatal("projection should display the live slot, not the legacy answer")
+	if !strings.Contains(view, `"done":false`) || !strings.Contains(view, `"slots":["","screw","","","",""]`) || strings.Contains(view, `"solution"`) {
+		t.Fatal("projection should display the actual choice, without an answer key or the legacy answer")
 	}
 	seats := exercise(t, app, "GET", teacherPath+"/live-seats", nil, teacher, 200).Body.String()
-	if !strings.Contains(seats, `"stage":2,"count":1,"total":6`) || strings.Contains(seats, "lens") {
+	if !strings.Contains(seats, `"stage":2,"count":1,"total":6`) || strings.Contains(seats, "screw") {
 		t.Fatal("seat summary should expose only the count and total")
 	}
-	for _, draft := range []liveDraft{{Slots: []string{"combine", "", "combine", "", ""}}, {Slots: []string{"combine", "", "cost", "", ""}}} {
+	for _, draft := range []liveDraft{{Slots: []string{"combine", "", "combine", "", ""}}, {Slots: []string{"combine", "", "unknown", "", ""}}} {
 		exercise(t, app, "POST", studentPath+"/live", liveFrame{Stage: 3, Draft: draft}, student, 400)
 	}
-	if !validLive(3, liveDraft{Slots: []string{"", "reuse", "", "", ""}}) || !validLive(5, liveDraft{Slots: wiring, On: true, Playing: true}) {
+	if !validLive(3, liveDraft{Slots: []string{"", "cost", "", "", ""}}) || !validLive(5, liveDraft{Slots: wiring, On: true, Playing: true}) {
 		t.Fatal("the new activities must accept valid live frames")
+	}
+	for _, record := range []struct {
+		stage  string
+		values []string
+		label  string
+	}{
+		{"2", append([]string{"device-phone"}, frame.Draft.Slots...), "一颗螺丝"},
+		{"3", []string{"combine", "", "cost", "", ""}, "一定更便宜"},
+		{"3", []string{"combine", "repair", "parallel", "reuse", "cost"}, "一定更便宜"},
+	} {
+		path := studentPath + "/activity/" + record.stage
+		exercise(t, app, "POST", path, testAnswer(record.values, ""), student, 200)
+		response := exercise(t, app, "GET", path, nil, student, 200)
+		var activity struct{ Answer *submission }
+		if err := json.Unmarshal(response.Body.Bytes(), &activity); err != nil || activity.Answer == nil || !slices.Equal(activity.Answer.Values, record.values) {
+			t.Fatalf("activity %s should restore the submitted slots: %s", record.stage, response.Body.String())
+		}
+		results := exercise(t, app, "GET", teacherPath+"/results?stage="+record.stage, nil, teacher, 200).Body.String()
+		if !strings.Contains(results, record.label) {
+			t.Fatalf("activity %s teacher results should show %q", record.stage, record.label)
+		}
 	}
 	if validLive(5, liveDraft{Slots: badSlots}) || validLive(5, liveDraft{Slots: make([]string, len(wiring)), On: true}) {
 		t.Fatal("projection should reject swapped cables and an incomplete boot")

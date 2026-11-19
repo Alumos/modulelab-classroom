@@ -295,8 +295,10 @@
 
   function draft() { return drafts[stage]; }
 
-  function fillSlots(values, anchors) {
-    return anchors.map(function (anchor, index) { return values[index] || ''; });
+  function fillSlots(values, count) {
+    var slots = [];
+    for (var index = 0; index < count; index++) slots.push(values[index] || '');
+    return slots;
   }
 
   function newDraft(answer, index) {
@@ -305,7 +307,7 @@
     if (index === 0) { saved.flight = values.indexOf('flight') >= 0; saved.values = values.filter(function (value) { return value !== 'flight'; }); saved.step = -1; }
     if (index === 1 || index === 2) {
       saved.selected = index === 1 ? values[0] || content.projects[0].id : '';
-      saved.slots = index === 1 ? fillSlots(values.slice(1), find(content.projects, saved.selected).solution) : fillSlots(values, content.solution);
+      saved.slots = index === 1 ? fillSlots(values.slice(1), find(content.projects, saved.selected).slotCount) : fillSlots(values, content.slotCount);
       saved.values = [];
     }
     if (index === 5) saved.step = 0;
@@ -316,7 +318,7 @@
       saved.mode = answer ? 'new' : 'old';
       saved.lights = makeLightWorkspace(values);
     }
-    if (index === 4) { saved.slots = fillSlots(values, content.wiring); saved.on = !!answer; }
+    if (index === 4) { saved.slots = fillSlots(values, content.wiring.length); saved.on = !!answer; }
     return saved;
   }
 
@@ -452,12 +454,12 @@
 
   function choiceSlots(items, heading) {
     var saved = draft();
-    return '<section class="choice-board"><div class="choice-head"><h2>' + heading + '</h2><b>' + saved.slots.filter(Boolean).length + ' / ' + saved.slots.length + '</b></div>' +
+    return '<section class="choice-board"><div class="choice-head"><h2>' + esc(heading) + '</h2><b>' + saved.slots.filter(Boolean).length + ' / ' + saved.slots.length + '</b></div>' +
       '<div class="choice-slots">' + saved.slots.map(function (value, index) {
         var item = find(items, value);
         return btn(item ? esc(item.name) : '<span aria-hidden="true">+</span>', 'drop', 'choice-slot' + (item ? ' filled' : ''),
           'id="slot-' + index + '" ' + attr('drop', index) + ' aria-label="' + (item ? esc(item.name) + '，点此移除' : '空槽 ' + (index + 1)) + '"');
-      }).join('') + '</div><p class="local-feedback' + (saved.wrong ? ' error' : '') + '" role="status">' + esc(saved.notice || '') + '</p></section>';
+      }).join('') + '</div></section>';
   }
 
   function choiceTray(items, heading) {
@@ -465,7 +467,7 @@
     return '<section class="choice-tray"><h2>' + heading + '</h2><div class="choice-rack">' + items.map(function (item) {
       var placed = saved.slots.indexOf(item.id) >= 0;
       var picked = saved.focus === item.id;
-      return btn(esc(item.name) + (placed ? ' <span aria-hidden="true">✓</span>' : ''), 'pick-choice', 'choice-piece' + (picked ? ' picked' : ''),
+      return btn(esc(item.name), 'pick-choice', 'choice-piece' + (picked ? ' picked' : ''),
         'id="pick-' + item.id + '" ' + attr('value', item.id) + pressed(picked) + (placed ? ' disabled' : ' ' + attr('piece', item.id)));
     }).join('') + '</div></section>';
   }
@@ -477,13 +479,13 @@
       return btn(esc(item.name), 'project', 'button device-tab', 'id="pick-' + item.id + '" ' + attr('value', item.id) + pressed(project === item));
     }).join('') + '</div><p class="instruction">读一读设备能做什么，把需要的模块拖入空槽，也可以点选。</p>' +
       '<div class="device-workbench"><div class="device-profile">' + svg(project.art) + '<div><h2>' + esc(project.name) + '</h2><p>' + esc(project.info) + '</p></div></div>' +
-      choiceSlots(project.modules, '已选模块') + '</div>' + choiceTray(project.modules, '模块清单');
+      choiceSlots(project.modules, project.name + '包含了哪些模块？') + '</div>' + choiceTray(project.modules, '模块清单');
   }
 
   function stageThree() {
     return '<ol class="advantage-questions" aria-label="想一想">' + content.questions.map(function (question, index) {
       return '<li><span aria-hidden="true">' + pad(index + 1) + '</span><p>' + esc(question) + '</p></li>';
-    }).join('') + '</ol><p class="instruction">从下方拖入你认为正确的答案，也可以点选。</p>' +
+    }).join('') + '</ol><p class="instruction">从下方拖入你认同的选项，也可以点选。</p>' +
       choiceSlots(content.options, '模块化有哪些优点？') + choiceTray(content.options, '备选答案');
   }
 
@@ -849,7 +851,7 @@
     var values = saved.values.slice();
     if (stage === 0 && saved.flight) values.push('flight');
     if (stage === 1 || stage === 2) {
-      if (saved.slots.indexOf('') >= 0) { message(stage === 1 ? '请把设备需要的模块选齐。' : '请把模块化的优点选齐。', 'error'); return; }
+      if (!saved.slots.some(Boolean)) { message('请至少放入一张卡片再提交。'); return; }
       values = saved.slots.slice();
       if (stage === 1) values.unshift(saved.selected);
     }
@@ -985,8 +987,8 @@
     if (stage === 0) return value === target && !has(value);
     if (stage === 1 || stage === 2) {
       var saved = draft();
-      var solution = stage === 1 ? find(content.projects, saved.selected).solution : content.solution;
-      return saved.slots[Number(target)] === '' && saved.slots.indexOf(value) < 0 && solution.indexOf(value) >= 0;
+      var options = stage === 1 ? find(content.projects, saved.selected).modules : content.options;
+      return saved.slots[Number(target)] === '' && saved.slots.indexOf(value) < 0 && !!find(options, value);
     }
     if (stage === 3) return value === 'module' && draft().mode === 'new' && !!draft().lights.shared && !draft().playing && /^call-[123]$/.test(target) && !has(target);
     if (stage === 4) return !draft().on && content.wiring[Number(target)] === value && !draft().slots[Number(target)];
@@ -997,14 +999,10 @@
     if (!content || !value) return;
     var saved = draft();
     if (!compatible(value, target)) {
-      if (stage !== 0 && stage !== 1 && stage !== 2 && stage !== 4) return;
+      if (stage !== 0 && stage !== 4) return;
       saved.wrong = true;
-      if (stage === 1 || stage === 2) {
-        saved.notice = saved.slots[Number(target)] ? '这个槽已填好，试试其他空槽。' : stage === 1 ? '再读读设备的功能，换一个试试。' : '这不是模块化的优点，换一个试试。';
-      } else {
-        saved.notice = stage === 4 ? '这里不是它的接驳位，部件已回到托盘。' : '这里不是它的安装位，部件已回到托盘。';
-        saved.selected = '';
-      }
+      saved.notice = stage === 4 ? '这里不是它的接驳位，部件已回到托盘。' : '这里不是它的安装位，部件已回到托盘。';
+      saved.selected = '';
       saved.focus = '';
       renderStage('pick-' + value);
       var returned = id('pick-' + value);
@@ -1020,7 +1018,6 @@
     } else if (stage === 1 || stage === 2) {
       saved.slots[Number(target)] = value;
       saved.focus = '';
-      saved.notice = saved.slots.indexOf('') < 0 ? (stage === 1 ? '模块选齐了！' : '优点选齐了！') : '';
     } else if (stage === 3) {
       saved.values.push(target);
       saved.selected = '';
@@ -1409,15 +1406,11 @@
       deviceTrials[saved.selected] = saved;
       drafts[stage] = deviceTrials[value] || newDraft({values: [value]}, stage);
       draft().focus = '';
-      draft().notice = '';
-      draft().wrong = false;
       renderStage(button.id);
     },
     'pick-choice': function (button, value, event) {
       var saved = draft();
       saved.focus = saved.focus === value ? '' : value;
-      saved.notice = '';
-      saved.wrong = false;
       var next = saved.slots.indexOf('');
       renderStage(saved.focus && !event.detail && next >= 0 ? 'slot-' + next : button.id);
     },
@@ -1465,11 +1458,8 @@
       var choice = stage === 1 || stage === 2;
       var value = choice ? draft().focus : draft().selected;
       var target = button.getAttribute('data-drop');
-      if (!value && choice && draft().slots[Number(target)]) {
-        var saved = draft();
-        saved.slots[Number(target)] = '';
-        saved.wrong = false;
-        saved.notice = '';
+      if (choice && draft().slots[Number(target)]) {
+        draft().slots[Number(target)] = '';
         renderStage(button.id);
         return;
       }
@@ -1577,7 +1567,7 @@
     if (hoverSlot === target) return;
     if (hoverSlot) markSlot(hoverSlot, false);
     hoverSlot = target;
-    if (target && ((stage === 1 || stage === 2) ? !target.classList.contains('filled') : compatible(value, target.getAttribute('data-drop')))) markSlot(target, true);
+    if (target && compatible(value, target.getAttribute('data-drop'))) markSlot(target, true);
   }
   function markSlot(slot, active) {
     var nodes = slot.getAttribute('data-fit') === 'power' ? slot.parentNode.querySelectorAll('.fitting-power') : [slot];
