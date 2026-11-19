@@ -9,6 +9,7 @@ import (
 type lightWorkspace struct {
 	Direct []lightSetting `json:"direct"`
 	Shared *lightSetting  `json:"shared"`
+	Mask   int            `json:"mask"`
 }
 
 type liveDraft struct {
@@ -22,13 +23,14 @@ type liveDraft struct {
 	Playing     bool            `json:"playing,omitempty"`
 	Flight      bool            `json:"flight,omitempty"`
 	Step        int             `json:"step"`
-	Color       string          `json:"color,omitempty"`
 	Preview     int             `json:"preview"`
 	Mode        string          `json:"mode,omitempty"`
 	On          bool            `json:"on,omitempty"`
 	Lights      *lightWorkspace `json:"lights,omitempty"`
 	LightStep   string          `json:"lightStep,omitempty"`
 	LightClosed bool            `json:"lightClosed,omitempty"`
+	LightPick   int             `json:"lightPick,omitempty"`
+	LightLamp   string          `json:"lightLamp,omitempty"`
 }
 
 type liveFrame struct {
@@ -139,19 +141,21 @@ func validLive(stage int, draft liveDraft) bool {
 	case 3:
 		return validItem(advantageOptions, draft.Focus) && validChoiceSlots(draft.Slots, advantageSlotCount, advantageOptions)
 	case 4:
-		if lights := draft.Lights; lights != nil {
-			if len(lights.Direct) != len(lightPhases) || (lights.Shared == nil && len(draft.Values) != 0) ||
-				(lights.Shared != nil && (!lights.Shared.valid() || lights.Shared.Color != draft.Color)) {
+		lights := draft.Lights
+		if lights == nil || len(lights.Direct) != len(lightPhases) ||
+			(lights.Shared == nil && (len(draft.Values) != 0 || (lights.Mask != 0 && !validLightMask(lights.Mask)))) ||
+			(lights.Shared != nil && (!lights.Shared.valid() || !validLightMask(lights.Mask))) ||
+			draft.LightPick < 0 || draft.LightPick > len(lightPhases) ||
+			(lights.Shared == nil && (draft.LightPick == 0) != (lights.Mask == 0)) || (lights.Shared != nil && draft.LightPick != 0) {
+			return false
+		}
+		for _, setting := range lights.Direct {
+			if !setting.valid() {
 				return false
 			}
-			for _, setting := range lights.Direct {
-				if !setting.valid() {
-					return false
-				}
-			}
 		}
-		return find(colors, draft.Color).ID != "" && (draft.Selected == "" || draft.Selected == "module") &&
-			(draft.Mode == "" || draft.Mode == "old" || draft.Mode == "new") && draft.Preview >= -1 && draft.Preview <= 3 &&
+		return validItem(colors, draft.LightLamp) && (draft.Selected == "" || draft.Selected == "module") &&
+			(draft.Mode == "" || draft.Mode == "old" || draft.Mode == "new") && draft.Preview >= -1 && draft.Preview <= len(lightPhases) &&
 			containsOnly(draft.Values, lightCalls) && containsOnly([]string{draft.LightStep}, []string{"", "output", "wait", "off", "skip", "done"})
 	case 5:
 		if len(draft.Slots) != len(wiring) || !validItem(parts, draft.Selected) || !validItem(parts, draft.Focus) {

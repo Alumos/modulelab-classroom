@@ -112,8 +112,13 @@ var advantageOptions = choices("whole:坏了就要整机更换", "combine:灵活
 const advantageSlotCount = 5
 
 var colors = []item{{"blue", "蓝色", "", ""}, {"amber", "橙色", "", ""}, {"green", "绿色", "", ""}, {"purple", "紫色", "", ""}, {"red", "红色", "", ""}}
-var lightPhases = []string{"起飞前", "航拍中", "降落后"}
-var lightCalls = []string{"call-1", "call-2", "call-3"}
+var lightPhases = []string{"起飞前", "航拍中", "左转", "右转", "降落后"}
+var lightCalls = []string{"call-1", "call-2", "call-3", "call-4", "call-5"}
+var legacyLightPhases = []string{"起飞前", "航拍中", "降落后"}
+
+const allLightBlocks = 7
+
+func validLightMask(mask int) bool { return mask > 0 && mask <= allLightBlocks }
 
 type lightSetting struct {
 	Color    string `json:"color"`
@@ -303,16 +308,16 @@ func validate(idx int, values []string, text string) string {
 			return "请至少放入一张答案卡片再提交。"
 		}
 	case 3:
-		if (len(values) != 4 && len(values) != 8) || !slices.Equal(values[1:4], lightCalls) || strings.TrimSpace(text) == "" {
-			return "请接好三处模块调用，写下你的发现。"
+		if len(values) != 12 || !slices.Equal(values[:5], lightCalls) || strings.TrimSpace(text) == "" {
+			return "请接好五处模块调用，写下你的发现。"
 		}
-		if len(values) == 4 && find(colors[1:], values[0]).ID == "" {
-			return "请换一种灯色再提交。"
-		}
-		for pos, value := range values[4:] {
-			if setting, ok := parseLightSetting(value); !ok || (pos == 3 && setting.Color != values[0]) {
+		for _, value := range values[5:11] {
+			if _, ok := parseLightSetting(value); !ok {
 				return "请检查积木中的灯光设置。"
 			}
+		}
+		if mask, err := strconv.Atoi(values[11]); err != nil || !validLightMask(mask) {
+			return "请先选中要封装的积木。"
 		}
 	case 4:
 		if !slices.Equal(values, wiring) {
@@ -367,20 +372,29 @@ func displayValues(idx int, values []string) []string {
 				}
 			}
 		case 3:
-			if pos == 0 && len(values) == 4 {
+			if len(values) == 12 {
+				switch {
+				case pos < 5:
+					label = lightPhases[pos] + "调用"
+				case pos < 11:
+					setting, _ := parseLightSetting(value)
+					if pos < 10 {
+						label = "独立 · " + lightPhases[pos-5] + "：" + lightSettingLabel(setting, allLightBlocks)
+					} else {
+						mask, _ := strconv.Atoi(values[11])
+						label = "共用模块：" + lightSettingLabel(setting, mask)
+					}
+				}
+			} else if pos == 0 && len(values) == 4 {
 				label = find(colors, value).Name
 			} else if pos >= 1 && pos <= 3 {
-				label = lightPhases[pos-1] + "调用"
+				label = legacyLightPhases[pos-1] + "调用"
 			} else if setting, ok := parseLightSetting(value); ok && pos >= 4 && pos <= 7 {
 				label = "共用模块"
 				if pos < 7 {
-					label = "独立 · " + lightPhases[pos-4]
+					label = "独立 · " + legacyLightPhases[pos-4]
 				}
-				color := "不亮"
-				if setting.Enabled {
-					color = find(colors, setting.Color).Name
-				}
-				label += "：" + color + " · " + strconv.FormatFloat(float64(setting.Duration)/1000, 'f', -1, 64) + " 秒"
+				label += "：" + lightSettingLabel(setting, 3)
 			}
 		case 4:
 			if legacy && pos < len(legacyPortNames) {
@@ -408,4 +422,22 @@ func displayValues(idx int, values []string) []string {
 		}
 	}
 	return labels
+}
+
+func lightSettingLabel(setting lightSetting, mask int) string {
+	var labels []string
+	if mask&1 != 0 {
+		color := "不亮"
+		if setting.Enabled {
+			color = find(colors, setting.Color).Name
+		}
+		labels = append(labels, color)
+	}
+	if mask&2 != 0 {
+		labels = append(labels, strconv.FormatFloat(float64(setting.Duration)/1000, 'f', -1, 64)+" 秒")
+	}
+	if mask&4 != 0 {
+		labels = append(labels, "熄灭彩灯")
+	}
+	return strings.Join(labels, " · ")
 }

@@ -103,7 +103,7 @@ func TestClassroomJourney(t *testing.T) {
 		testAnswer([]string{"camera", "power", "control", "gps", "radio", "battery", "flight"}, ""),
 		testAnswer([]string{"device-chair", "massage", "music", "heat", "air", "panel"}, ""),
 		testAnswer([]string{"parallel", "reuse", "unit-test", "repair", "combine"}, ""),
-		testAnswer([]string{"amber", "call-1", "call-2", "call-3"}, "只换一次，三处都变了。"),
+		testAnswer(append(slices.Clone(lightCalls), "blue:500:on", "blue:500:on", "blue:500:on", "blue:500:on", "blue:500:on", "amber:500:on", "7"), "只换一次，五处都变了。"),
 		testAnswer([]string{"psu", "ram", "disk", "gpu", "screen", "keyboard", "mouse", "sata-wire", "hdmi-wire"}, ""),
 		testAnswer([]string{"wash", "cargo", "thermal"}, "=换上不同模块，能做不同的事。"),
 	}
@@ -415,17 +415,25 @@ func TestLightWorkspace(t *testing.T) {
 	activity := studentPath + "/activity/4"
 	exercise(t, app, "POST", room+"/activity/4", map[string]bool{"open": true}, teacher, 200)
 
-	direct := []lightSetting{{"red", 1000, true}, {"blue", 500, true}, {"blue", 500, true}}
+	direct := []lightSetting{{"red", 1000, true}, {"blue", 500, true}, {"green", 500, true}, {"purple", 500, true}, {"blue", 500, true}}
 	shared := lightSetting{"blue", 1500, false}
-	draft := liveDraft{Values: lightCalls, Color: shared.Color, Mode: "new", Preview: 1, Playing: true, LightStep: "wait", LightClosed: true,
-		Lights: &lightWorkspace{Direct: direct, Shared: &shared}}
+	const waitAndOff = 6
+	draft := liveDraft{Values: lightCalls, Mode: "new", Preview: 3, Playing: true, LightStep: "wait", LightLamp: "purple", LightClosed: true,
+		Lights: &lightWorkspace{Direct: direct, Shared: &shared, Mask: waitAndOff}}
 	frame := liveFrame{Stage: 4, Draft: draft}
 	invalid := frame
 	invalid.Draft.LightStep = "unknown"
 	exercise(t, app, "POST", studentPath+"/live", invalid, student, 400)
 	invalid = frame
-	invalid.Draft.Lights = &lightWorkspace{Direct: direct[:2], Shared: &shared}
+	invalid.Draft.Lights = &lightWorkspace{Direct: direct[:2], Shared: &shared, Mask: waitAndOff}
 	exercise(t, app, "POST", studentPath+"/live", invalid, student, 400)
+	invalid = frame
+	invalid.Draft.Lights = &lightWorkspace{Direct: direct, Shared: &shared, Mask: 8}
+	exercise(t, app, "POST", studentPath+"/live", invalid, student, 400)
+	if !validLive(4, liveDraft{Mode: "old", LightPick: 3, Lights: &lightWorkspace{Direct: direct, Mask: waitAndOff}}) ||
+		validLive(4, liveDraft{Mode: "old", Lights: &lightWorkspace{Direct: direct, Mask: waitAndOff}}) {
+		t.Fatal("preparing a module must carry a valid choice and source event")
+	}
 	exercise(t, app, "POST", studentPath+"/live", frame, student, 204)
 	mirror := exercise(t, app, "GET", room+"/live?seat=1", nil, teacher, 200)
 	var projected liveFrame
@@ -433,26 +441,35 @@ func TestLightWorkspace(t *testing.T) {
 		t.Fatal(err)
 	}
 	if projected.Draft.Lights == nil || projected.Draft.Lights.Shared == nil || *projected.Draft.Lights.Shared != shared ||
-		!slices.Equal(projected.Draft.Lights.Direct, direct) || projected.Draft.LightStep != "wait" || !projected.Draft.LightClosed {
+		!slices.Equal(projected.Draft.Lights.Direct, direct) || projected.Draft.Lights.Mask != waitAndOff ||
+		projected.Draft.LightStep != "wait" || projected.Draft.LightLamp != "purple" || projected.Draft.Preview != 3 || !projected.Draft.LightClosed {
 		t.Fatalf("projection did not preserve the workspace: %#v", projected.Draft)
 	}
 
-	values := []string{"blue", "call-1", "call-2", "call-3", "red:1000:on", "blue:500:on", "blue:500:on", "blue:1500:off"}
-	const reflection = "独立积木只改一段，共用模块一次改三段。"
+	legacy := []string{"blue", "call-1", "call-2", "call-3", "red:1000:on", "blue:500:on", "blue:500:on", "blue:1500:off"}
+	previous := displayValues(3, legacy)
+	if !slices.Contains(previous, "降落后调用") || slices.Contains(previous, "左转调用") {
+		t.Fatal("historical records must keep the original events")
+	}
+	values := append(slices.Clone(lightCalls), "red:1000:on", "blue:500:on", "green:500:on", "purple:500:on", "blue:500:on", "blue:1500:off", "6")
+	const reflection = "独立积木只改一段，共用等待积木一次改五段。"
 	exercise(t, app, "POST", activity, testAnswer(values[:5], reflection), student, 400)
-	for _, malformed := range []string{"blue:1300:on", "blue:500:maybe", "orange:500:on", "red:1500:off"} {
+	for _, malformed := range []string{"blue:1300:on", "blue:500:maybe", "orange:500:on"} {
 		bad := slices.Clone(values)
-		bad[7] = malformed
+		bad[10] = malformed
 		exercise(t, app, "POST", activity, testAnswer(bad, reflection), student, 400)
 	}
+	bad := slices.Clone(values)
+	bad[11] = "0"
+	exercise(t, app, "POST", activity, testAnswer(bad, reflection), student, 400)
 	exercise(t, app, "POST", activity, testAnswer(values, reflection), student, 200)
 	stored := exercise(t, app, "GET", activity, nil, student, 200)
 	if !strings.Contains(stored.Body.String(), "blue:1500:off") || !strings.Contains(stored.Body.String(), "red:1000:on") {
 		t.Fatal("both programs must survive submission")
 	}
 	record := exercise(t, app, "GET", room+"/results?stage=4", nil, teacher, 200)
-	if !strings.Contains(record.Body.String(), "独立 · 起飞前：红色 · 1 秒") || !strings.Contains(record.Body.String(), "共用模块：不亮 · 1.5 秒") {
-		t.Fatal("teacher record must show readable settings for both programs")
+	if !strings.Contains(record.Body.String(), "右转调用") || !strings.Contains(record.Body.String(), "独立 · 左转：绿色 · 0.5 秒") || !strings.Contains(record.Body.String(), "共用模块：1.5 秒 · 熄灭彩灯") {
+		t.Fatal("teacher record must show the new events and only the encapsulated commands")
 	}
 }
 

@@ -312,8 +312,7 @@
     }
     if (index === 5) saved.step = 0;
     if (index === 3) {
-      saved.color = values[0] || 'blue';
-      saved.values = values.slice(1, 4);
+      saved.values = values.length === 12 ? values.slice(0, 5) : answer ? ['call-1', 'call-2', 'call-5'] : [];
       saved.preview = -1;
       saved.mode = answer ? 'new' : 'old';
       saved.lights = makeLightWorkspace(values);
@@ -491,6 +490,9 @@
 
   var lightTimes = [500, 1000, 1500, 2000];
   var lightModes = {old: '不用模块', 'new': '使用模块'};
+  var lightCommands = ['output', 'wait', 'off'];
+  var lightLabels = ['设置彩灯', '等待', '熄灭彩灯'];
+  var allLightBlocks = 7;
 
   function lightSettings(value, color) {
     var fields = value ? value.split(':') : [];
@@ -498,16 +500,34 @@
   }
 
   function makeLightWorkspace(values) {
-    return {direct: [lightSettings(values[4]), lightSettings(values[5]), lightSettings(values[6])],
-      shared: values.length >= 4 ? lightSettings(values[7], values[0]) : null};
+    var current = values.length === 12;
+    var settings = current ? values.slice(5, 10) : [values[4], values[5], '', '', values[6]];
+    return {direct: settings.map(function (value) { return lightSettings(value); }),
+      shared: values.length >= 4 ? lightSettings(values[current ? 10 : 7], values[0]) : null,
+      mask: current ? Number(values[11]) : values.length >= 4 ? allLightBlocks : 0};
   }
 
   function lightValues(settings) {
     return settings.color + ':' + settings.duration + ':' + (settings.enabled ? 'on' : 'off');
   }
 
-  function lightProgram(saved, mode, index) {
-    return mode === 'old' ? saved.lights.direct[index] : (saved.values.indexOf('call-' + (index + 1)) >= 0 ? saved.lights.shared : null);
+  function lightCall(index) { return 'call-' + (index + 1); }
+
+  function lightConnected(saved, index) { return saved.values.indexOf(lightCall(index)) >= 0; }
+
+  function lightModuleName(saved) { return saved.lights.mask === allLightBlocks ? '闪一次灯' : '彩灯模块'; }
+
+  function lightOrder(mask, connected) {
+    var order = [];
+    var inserted = false;
+    lightCommands.forEach(function (command, index) {
+      if (!(mask & (1 << index))) order.push(command);
+      else if (!inserted) {
+        inserted = true;
+        if (connected) lightCommands.forEach(function (name, slot) { if (mask & (1 << slot)) order.push(name); });
+      }
+    });
+    return order;
   }
 
   function lightField(key, field, label, options, current, disabled) {
@@ -516,15 +536,24 @@
     }).join('') + '</select>';
   }
 
-  function lightStack(key, settings, heading, disabled, action) {
-    return '<div class="light-stack" id="light-stack-' + key + '">' +
-      (heading ? '<div class="light-block light-hat">' + heading + '</div>' : '') +
-      '<div class="light-block light-output" data-light-command="output">' + lightField(key, 'state', '灯的状态', [['on', '点亮'], ['off', '保持熄灭']], settings.enabled ? 'on' : 'off', disabled) +
-      lightField(key, 'color', '灯色', content.colors.map(function (color) { return [color.id, color.name]; }), settings.color, disabled) + '灯</div>' +
-      '<div class="light-block light-clock" data-light-command="wait">等待' + lightField(key, 'time', '等待时长（秒）', lightTimes.map(function (duration) {
+  function lightBlock(key, settings, index, disabled, selectable, chosen) {
+    var command = lightCommands[index];
+    var label = command === 'output' ? lightField(key, 'state', '灯的状态', [['on', '点亮'], ['off', '保持熄灭']], settings.enabled ? 'on' : 'off', disabled) +
+      lightField(key, 'color', '灯色', content.colors.map(function (color) { return [color.id, color.name]; }), settings.color, disabled) + '灯' :
+      command === 'wait' ? '等待' + lightField(key, 'time', '等待时长（秒）', lightTimes.map(function (duration) {
         return [duration, String(duration / 1000)];
-      }), settings.duration, disabled) + '秒</div>' +
-      '<div class="light-block light-output light-end" data-light-command="off">熄灭彩灯</div>' + (action || '') + '</div>';
+      }), settings.duration, disabled) + '秒' : lightLabels[index];
+    var value = key + ':' + index;
+    return '<div class="light-code-row' + (chosen ? ' light-chosen' : '') + '"' + (selectable && !disabled ? ' data-action="light-select" ' + attr('value', value) : '') + '>' +
+      (selectable ? btn(chosen ? '✓' : '', 'light-select', 'light-check', 'id="light-select-' + key + '-' + index + '" ' + attr('value', value) +
+        ' aria-label="' + esc(content.calls[key] + '：选择' + lightLabels[index] + '积木') + '"' + pressed(chosen) + disabled) : '') +
+      '<div class="light-block light-' + (index === 1 ? 'clock' : 'output') + (index === 2 ? ' light-end' : '') + '" ' + attr('light-command', command) + '>' + label + '</div></div>';
+  }
+
+  function lightStack(key, settings, mask, disabled, selectable, chosen) {
+    return '<div class="light-stack" id="light-stack-' + key + '">' + lightCommands.map(function (command, index) {
+      return mask & (1 << index) ? lightBlock(key, settings, index, disabled, selectable, !!(chosen & (1 << index))) : '';
+    }).join('') + '</div>';
   }
 
   function lightCrate() {
@@ -533,32 +562,66 @@
 
   function lightModule(saved, disabled) {
     var closed = !!saved.lightClosed;
-    return '<div class="light-module">' + btn(lightCrate() + '<b>闪一次灯</b><span class="light-module-arrow" aria-hidden="true"></span>', 'light-open', 'light-module-toggle',
+    return '<div class="light-module">' + btn(lightCrate() + '<b>' + lightModuleName(saved) + '</b><span class="light-module-arrow" aria-hidden="true"></span>', 'light-open', 'light-module-toggle',
       'id="light-open" aria-controls="light-module-body" aria-expanded="' + !closed + '"' + disabled) +
-      '<div class="light-module-body" id="light-module-body"' + (closed ? ' hidden' : '') + '>' + lightStack('shared', saved.lights.shared, '', disabled) + '</div></div>';
+      '<div class="light-module-body" id="light-module-body"' + (closed ? ' hidden' : '') + '>' + lightStack('shared', saved.lights.shared, saved.lights.mask, disabled, false, 0) + '</div></div>';
   }
 
-  function packageLights(button, value) {
+  function packageLights() {
     var saved = draft();
-    if (saved.lights.shared || saved.playing) return;
-    var program = lightSettings(lightValues(saved.lights.direct[Number(value)]));
-    saved.lights.shared = program;
-    saved.color = program.color;
-    saved.mode = 'new';
-    saved.lightClosed = true;
-    saved.lightStep = '';
-    if (reducedMotion && reducedMotion.matches && !fullMotion) { renderStage('light-open'); return; }
-    var stack = id('light-stack-' + value);
+    if (saved.lights.shared || saved.playing || !saved.lightPick || !saved.lights.mask) return;
+    var mask = saved.lights.mask;
+    var program = lightSettings(lightValues(saved.lights.direct[saved.lightPick - 1]));
     var color = find(content.colors, program.color).name;
+    var labels = [program.enabled ? '点亮' + color + '灯' : '保持熄灭', '等待 ' + program.duration / 1000 + ' 秒', lightLabels[2]];
+    var editor = id('light-editor');
     Array.prototype.forEach.call(id('stage').querySelectorAll('button, select, textarea'), function (control) { control.disabled = true; });
-    stack.innerHTML = '<div class="light-seal" role="status" aria-label="将三块积木封装为闪一次灯">' +
-      '<div aria-hidden="true" class="light-seal-scene"><span class="light-seal-piece light-output">' + (program.enabled ? '点亮' + esc(color) + '灯' : '保持熄灭') + '</span>' +
-      '<span class="light-seal-piece light-clock">等待 ' + program.duration / 1000 + ' 秒</span>' +
-      '<span class="light-seal-piece light-output">熄灭彩灯</span><div class="light-seal-box">' + lightCrate() + '</div>' +
-      '<b class="light-seal-name">闪一次灯</b></div></div>';
-    stack.scrollIntoView({block: 'nearest'});
-    queueFrame();
-    clock = setTimeout(function () { renderStage('light-open'); }, 1500);
+    editor.innerHTML = '<div class="light-seal-scene" role="status" aria-label="正在封装所选积木">' + labels.map(function (label, index) {
+      return mask & (1 << index) ? '<span class="light-seal-piece light-' + (index === 1 ? 'clock' : 'output') + '">' + esc(label) + '</span>' : '';
+    }).join('') + '<div class="light-seal-box">' + lightCrate() + '</div><b class="light-seal-name">' + lightModuleName(saved) + '</b></div>';
+    var scene = editor.firstChild;
+    scene.scrollIntoView({block: 'nearest'});
+    animateSeal(scene, function () {
+      saved.lights.shared = program;
+      saved.lightPick = 0;
+      saved.mode = 'new';
+      saved.lightClosed = true;
+      saved.lightStep = '';
+      renderStage('light-open');
+    });
+  }
+
+  function animateSeal(scene, finished) {
+    var pieces = scene.querySelectorAll('.light-seal-piece');
+    var box = scene.querySelector('.light-seal-box');
+    var lid = box.querySelector('.light-crate-lid');
+    var name = scene.querySelector('.light-seal-name');
+    var gentle = reducedMotion && reducedMotion.matches && !fullMotion;
+    var length = gentle ? 550 : 1340;
+    var started = flightNow();
+    lid.style.transformOrigin = '12% 85%';
+    function draw() {
+      if (!document.documentElement.contains(scene)) return;
+      var progress = interval(flightNow() - started, 0, length);
+      var closing = interval(progress, .63, .85);
+      var lift = (1 - closing) * (gentle ? .24 : 1);
+      lid.style.transform = 'translate(' + (-9 * lift) + 'px,' + (-15 * lift) + 'px) rotate(' + (-26 * lift) + 'deg)';
+      var bounce = gentle ? 0 : Math.sin(closing * Math.PI);
+      box.style.transform = 'translateY(' + (4 * bounce) + 'px) scale(' + (1 + .09 * bounce) + ',' + (1 - .09 * bounce) + ')';
+      Array.prototype.forEach.call(pieces, function (piece, index) {
+        var top = 92 - (pieces.length - 1 - index) * 40;
+        var intake = interval(progress, .05 + (pieces.length - 1 - index) * .10, .44 + (pieces.length - 1 - index) * .10);
+        var fall = intake * intake;
+        piece.style.top = top + 'px';
+        piece.style.transform = 'translateY(' + (gentle ? 0 : (161 - top) * fall) + 'px) scale(' + (gentle ? 1 : 1 - .75 * fall) + ')';
+        piece.style.opacity = String(1 - interval(intake, gentle ? 0 : .68, 1));
+      });
+      name.style.opacity = String(interval(progress, .69, .9));
+      if (progress >= 1) finished();
+      else if (window.requestAnimationFrame) window.requestAnimationFrame(draw);
+      else setTimeout(draw, 16);
+    }
+    draw();
   }
 
   function lightComparison(saved) {
@@ -566,10 +629,13 @@
       return '<th scope="col">' + esc(phase) + '</th>';
     }).join('') + '</tr></thead><tbody>' + ['old', 'new'].map(function (mode) {
       return '<tr><th scope="row">' + lightModes[mode] + '</th>' + content.calls.map(function (phase, index) {
-        var program = lightProgram(saved, mode, index);
-        var color = program && find(content.colors, program.color);
-        return '<td id="light-compare-' + mode + '-' + index + '">' + (program ? '<span class="light-chip light-' + (program.enabled ? esc(program.color) : 'off') + '">' +
-          (program.enabled ? esc(color && color.name) : '不亮') + '</span><small>' + program.duration / 1000 + ' 秒</small>' : '<span class="light-missing">未接入</span>') + '</td>';
+        if (mode === 'new' && !lightConnected(saved, index)) return '<td id="light-compare-new-' + index + '"><span class="light-missing">未接入</span></td>';
+        var mask = mode === 'new' ? saved.lights.mask : 0;
+        var output = mask & 1 ? saved.lights.shared : saved.lights.direct[index];
+        var wait = mask & 2 ? saved.lights.shared : saved.lights.direct[index];
+        var color = find(content.colors, output.color);
+        return '<td id="light-compare-' + mode + '-' + index + '"><span class="light-chip light-' + (output.enabled ? esc(output.color) : 'off') + '">' +
+          (output.enabled ? esc(color.name) : '不亮') + '</span><small>' + wait.duration / 1000 + ' 秒</small></td>';
       }).join('') + '</tr>';
     }).join('') + '</tbody></table>';
   }
@@ -579,31 +645,41 @@
     var mode = saved.mode || 'old';
     var lights = saved.lights;
     var disabled = saved.playing ? ' disabled' : '';
-    var palette = btn('调用 闪一次灯', 'part', 'light-block light-call light-pick' + (saved.selected === 'module' ? ' picked' : ''),
+    var moduleName = lightModuleName(saved);
+    var palette = btn('调用 ' + moduleName, 'part', 'light-block light-call light-pick' + (saved.selected === 'module' ? ' picked' : ''),
       'id="pick-module" data-value="module"' + (saved.playing ? ' disabled' : ' data-piece="module"') + pressed(saved.selected === 'module'));
-    var direct = '<div class="light-direct">' + lights.direct.map(function (settings, index) {
-      return lightStack(index, settings, '当 ' + esc(content.calls[index]), disabled, !lights.shared ?
-        btn('封装这组', 'light-package', 'button secondary light-package', 'id="light-package-' + index + '" ' + attr('value', index) + disabled) : '');
+    var direct = (!lights.shared ? '<div class="light-package-bar"><span>选中同一事件里要封装的积木</span>' +
+      btn('封装', 'light-package', 'button primary light-package', 'id="light-package"' + (lights.mask ? disabled : ' disabled')) + '</div>' : '') +
+      '<div class="light-direct">' + lights.direct.map(function (settings, index) {
+      return '<section class="light-event' + (!lights.shared ? ' light-selectable' : '') + '"><div class="light-block light-hat">当 ' + esc(content.calls[index]) + '</div>' +
+        lightStack(index, settings, allLightBlocks, disabled, !lights.shared, saved.lightPick === index + 1 ? lights.mask : 0) + '</section>';
     }).join('') + '</div>';
-    var calls = '<div class="light-call-list" aria-label="三段模块调用">' + content.calls.map(function (phase, index) {
-      var slot = 'call-' + (index + 1);
-      var filled = has(slot);
-      return '<div class="light-call-row" id="light-line-' + index + '"><b>' + esc(phase) + '</b>' +
-        (filled ? '<span class="light-block light-call">调用 闪一次灯</span>' : btn('接入调用', 'drop', 'light-block light-target', 'id="slot-' + slot + '" ' + attr('drop', slot) + ' aria-label="' + esc(phase + '：接入调用') + '"' + disabled)) +
-        (filled ? btn('×', 'light-remove', 'light-remove', 'id="light-remove-' + slot + '" ' + attr('value', slot) + ' aria-label="' + esc('移除' + phase + '的调用') + '"' + disabled) : '') + '</div>';
+    var calls = '<div class="light-call-list" aria-label="五段模块调用">' + content.calls.map(function (phase, index) {
+      var slot = lightCall(index);
+      var filled = lightConnected(saved, index);
+      var inserted = false;
+      return '<section class="light-event light-call-row" id="light-line-' + index + '"><div class="light-block light-hat">当 ' + esc(phase) + '</div>' +
+        '<div class="light-stack" id="light-stack-' + index + '">' + lightCommands.map(function (command, block) {
+          if (!(lights.mask & (1 << block))) return lightBlock(index, lights.direct[index], block, disabled, false, false);
+          if (inserted) return '';
+          inserted = true;
+          return '<div class="light-call-link">' + (filled ? '<span class="light-block light-call">调用 ' + moduleName + '</span>' :
+            btn('接入调用', 'drop', 'light-block light-target', 'id="slot-' + slot + '" ' + attr('drop', slot) + ' aria-label="' + esc(phase + '：接入调用') + '"' + disabled)) +
+            (filled ? btn('×', 'light-remove', 'light-remove', 'id="light-remove-' + slot + '" ' + attr('value', slot) + ' aria-label="' + esc('移除' + phase + '的调用') + '"' + disabled) : '') + '</div>';
+        }).join('') + '</div></section>';
     }).join('') + '</div>';
     var modular = lights.shared ? lightModule(saved, disabled) + '<div class="light-palette"><span>拖动或点选调用积木</span>' + palette + '</div>' + calls :
-      '<p class="light-empty">先在「不用模块」中封装一组积木。</p>';
+      '<p class="light-empty">先在「不用模块」中选中积木，再点「封装」。</p>';
     return '<div class="light-mode-tabs" aria-label="选择编程方式">' + ['old', 'new'].map(function (name) {
       return btn(lightModes[name], 'light-mode', 'light-tab', 'id="light-mode-' + name + '" ' + attr('value', name) + pressed(name === mode) + disabled);
-    }).join('') + '</div><div class="light-studio"><section class="light-editor" aria-label="积木工作区">' +
+    }).join('') + '</div><div class="light-studio"><section class="light-editor" id="light-editor" aria-label="积木工作区">' +
       (mode === 'old' ? direct : modular) + '</section><section class="light-preview" aria-label="无人机预览"><div class="light-preview-head"><h2>无人机预览</h2>' +
       btn(saved.playing ? '停止' : '运行', 'run', 'button primary', 'id="run-lights"' + (mode === 'new' && !lights.shared ? ' disabled' : '')) + '</div>' +
       '<div class="light-flight" id="light-flight"><div class="light-drone"><svg class="art" viewBox="0 0 320 200" aria-hidden="true" focusable="false">' +
       '<use xlink:href="' + artURL + 'drone"></use><path class="light-lenses" d="m54 129 10-2m193 0 10 2"/><g class="light-leds"><path class="light-glow" d="m54 129 10-2m193 0 10 2"/>' +
       '<path class="light-beam" d="m54 129 10-2m193 0 10 2"/><path class="light-core" d="m54 129 10-2m193 0 10 2"/></g></svg></div>' +
       '<p id="light-status" class="light-status" aria-live="polite">待运行</p></div>' + lightComparison(saved) + '</section></div>' +
-      textField('只改一处，两种写法有什么不同？', saved.text, '对比三段灯光，写下你的发现。');
+      textField('只改一处，两种写法有什么不同？', saved.text, '对比五段灯光，写下你的发现。');
   }
 
   function syncLightPreview(saved, labels) {
@@ -613,12 +689,16 @@
     var mode = saved.mode || 'old';
     var current = saved.playing && phase >= 0 && phase < labels.length;
     var command = current ? saved.lightStep || 'wait' : '';
-    var program = current && lightProgram(saved, mode, phase);
-    var lit = program && program.enabled && (command === 'output' || command === 'wait');
+    var lit = current && saved.lightLamp;
     var status = id('light-status');
     var label = current ? labels[phase] + ' · ' + (lit ? '灯亮' : command === 'skip' ? '未接入模块' : '灯灭') : saved.lightStep === 'done' ? '运行完成' : '待运行';
     if (status.textContent !== label) status.textContent = label;
-    flight.className = 'light-flight' + (current && phase === 1 ? ' light-airborne' : '') + (lit ? ' light-lit light-' + program.color : '');
+    flight.className = 'light-flight' + (lit ? ' light-lit light-' + saved.lightLamp : '');
+    var drone = flight.querySelector('.light-drone');
+    var gentle = reducedMotion && reducedMotion.matches && !fullMotion;
+    var turn = current && phase === 2 ? -1 : current && phase === 3 ? 1 : 0;
+    var air = current && phase < labels.length - 1;
+    drone.style.transform = 'translate(' + (turn * (gentle ? 2 : 8)) + '%,' + (air ? (gentle ? -2 : -6) : 0) + '%) rotate(' + (turn * (gentle ? 2 : 17)) + 'deg)';
     labels.forEach(function (name, index) {
       var compare = id('light-compare-' + mode + '-' + index);
       var line = id('light-line-' + index);
@@ -626,10 +706,12 @@
       compare.classList.toggle('light-executing', active);
       if (line) line.classList.toggle('light-executing', active);
     });
-    var activeStack = id('light-stack-' + (mode === 'new' ? 'shared' : phase));
+    var block = lightCommands.indexOf(command);
+    var inModule = current && block >= 0 && mode === 'new' && lightConnected(saved, phase) && (saved.lights.mask & (1 << block));
+    var activeStack = id('light-stack-' + (inModule ? 'shared' : phase));
     var commands = id('stage').querySelectorAll('[data-light-command]');
     Array.prototype.forEach.call(commands, function (node) {
-      node.classList.toggle('light-executing', !!(program && activeStack && activeStack.contains(node) && node.getAttribute('data-light-command') === command));
+      node.classList.toggle('light-executing', !!(current && activeStack && activeStack.contains(node) && node.getAttribute('data-light-command') === command));
     });
   }
 
@@ -856,8 +938,8 @@
       if (stage === 1) values.unshift(saved.selected);
     }
     if (stage === 3) {
-      if (saved.playing || !saved.lights.shared || values.length !== 3) { message('先接好三处模块调用，再提交。', 'error'); return; }
-      values = [saved.color].concat(values.sort(), saved.lights.direct.concat(saved.lights.shared).map(lightValues));
+      if (saved.playing || !saved.lights.shared || values.length !== content.calls.length) { message('先接好五处模块调用，再提交。', 'error'); return; }
+      values = values.sort().concat(saved.lights.direct.concat(saved.lights.shared).map(lightValues), String(saved.lights.mask));
     }
     if (stage === 4) {
       if (!saved.on) { message('请先接好部件并开机。', 'error'); return; }
@@ -949,6 +1031,7 @@
       saved.playing = false;
       saved.preview = -1;
       saved.lightStep = '';
+      saved.lightLamp = '';
       renderStage('run-lights');
       return;
     }
@@ -959,6 +1042,7 @@
     saved.selected = '';
     saved.preview = 0;
     saved.lightStep = '';
+    saved.lightLamp = '';
     renderStage('run-lights');
     function command(name, delay, next) {
       saved.lightStep = name;
@@ -971,14 +1055,25 @@
       if (saved.preview < content.calls.length) { phase(); return; }
       saved.playing = false;
       saved.lightStep = 'done';
+      saved.lightLamp = '';
       renderStage();
     }
     function phase() {
-      var program = lightProgram(saved, mode, saved.preview);
-      if (!program) { command('skip', 550, nextPhase); return; }
-      command('output', 260, function () {
-        command('wait', program.duration - 260, function () { command('off', 500, nextPhase); });
-      });
+      var connected = mode === 'new' && lightConnected(saved, saved.preview);
+      var mask = mode === 'new' ? saved.lights.mask : 0;
+      var order = lightOrder(mask, connected);
+      if (!order.length) { command('skip', 550, nextPhase); return; }
+      var index = 0;
+      function step() {
+        if (index === order.length) { nextPhase(); return; }
+        var name = order[index++];
+        var shared = connected && (mask & (1 << lightCommands.indexOf(name)));
+        var program = shared ? saved.lights.shared : saved.lights.direct[saved.preview];
+        if (name === 'output') saved.lightLamp = program.enabled ? program.color : '';
+        if (name === 'off') saved.lightLamp = '';
+        command(name, name === 'wait' ? program.duration : name === 'off' ? 410 : 220, step);
+      }
+      step();
     }
     phase();
   }
@@ -990,7 +1085,7 @@
       var options = stage === 1 ? find(content.projects, saved.selected).modules : content.options;
       return saved.slots[Number(target)] === '' && saved.slots.indexOf(value) < 0 && !!find(options, value);
     }
-    if (stage === 3) return value === 'module' && draft().mode === 'new' && !!draft().lights.shared && !draft().playing && /^call-[123]$/.test(target) && !has(target);
+    if (stage === 3) return value === 'module' && draft().mode === 'new' && !!draft().lights.shared && !draft().playing && /^call-[1-5]$/.test(target) && !has(target);
     if (stage === 4) return !draft().on && content.wiring[Number(target)] === value && !draft().slots[Number(target)];
     return false;
   }
@@ -1356,9 +1451,8 @@
     var mirrorText = incoming.text || '';
     var isLights = frame.stage === 4;
     incoming.values = incoming.values || [];
-    if (isLights && !incoming.lights) incoming.lights = makeLightWorkspace([incoming.color].concat(incoming.values));
     var layoutKey = JSON.stringify([frame.stage, frame.done, incoming], function (key, value) {
-      return key === 'text' || (isLights && (key === 'preview' || key === 'lightStep')) ? undefined : value;
+      return key === 'text' || (isLights && (key === 'preview' || key === 'lightStep' || key === 'lightLamp')) ? undefined : value;
     });
     if (layoutKey === paintedFrame) {
       if (id('response') && id('response').value !== mirrorText) id('response').value = mirrorText;
@@ -1431,6 +1525,16 @@
       saved.lightStep = '';
       renderStage(button.id);
     },
+    'light-select': function (button, value, event) {
+      var saved = draft();
+      if (event.target.tagName === 'SELECT' || event.target.tagName === 'OPTION' || saved.lights.shared || saved.playing) return;
+      var location = value.split(':');
+      var source = Number(location[0]) + 1;
+      var block = 1 << Number(location[1]);
+      saved.lights.mask = saved.lightPick === source ? saved.lights.mask ^ block : block;
+      saved.lightPick = saved.lights.mask ? source : 0;
+      renderStage('light-select-' + location.join('-'));
+    },
     'light-package': packageLights,
     'light-open': function (button) {
       var saved = draft();
@@ -1464,7 +1568,7 @@
         return;
       }
       if (!value && button.hasAttribute('data-mounted')) { draft().focus = button.getAttribute('data-mounted'); draft().wrong = false; draft().notice = ''; renderStage(button.id); return; }
-      if (!value) { message(stage === 3 ? '先选「调用 闪一次灯」，再点这里。' : choice ? '先选择下方的一张卡片。' : '先选一个部件，再点对应空槽。'); return; }
+      if (!value) { message(stage === 3 ? '先选调用积木，再点这里。' : choice ? '先选择下方的一张卡片。' : '先选一个部件，再点对应空槽。'); return; }
       place(value, target);
     },
     boot: bootComputer,
@@ -1533,7 +1637,7 @@
       var program = key === 'shared' ? saved.lights.shared : saved.lights.direct[Number(key)];
       if (field === 'time') program.duration = Number(event.target.value);
       else if (field === 'state') program.enabled = event.target.value === 'on';
-      else if (field === 'color') { program.color = event.target.value; if (key === 'shared') saved.color = program.color; }
+      else if (field === 'color') program.color = event.target.value;
       saved.lightStep = '';
       renderStage(event.target.id);
     }
