@@ -152,18 +152,20 @@ func TestClassroomJourney(t *testing.T) {
 	exercise(t, app, "GET", teacherRoom, nil, teacher, 401)
 }
 
-func TestFiftyConcurrentJoins(t *testing.T) {
-	app, err := newServer(t.TempDir(), "", false)
+func TestConcurrentJoinsBeyondFifty(t *testing.T) {
+	const students = 120
+	dataDir := t.TempDir()
+	app, err := newServer(dataDir, "", false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	teacher := exercise(t, app, "POST", "/api/teacher/login", map[string]string{"password": "2026"}, nil, 200).Result().Cookies()[0]
-	exercise(t, app, "POST", "/api/teacher/rooms", map[string]string{"title": "50 台电脑"}, teacher, 201)
+	exercise(t, app, "POST", "/api/teacher/rooms", map[string]string{"title": "并发入场"}, teacher, 201)
 	service := httptest.NewServer(app.handler())
 	defer service.Close()
 	var group sync.WaitGroup
-	names := make(chan string, seatLimit)
-	for range seatLimit {
+	names := make(chan string, students)
+	for range students {
 		group.Add(1)
 		go func() {
 			defer group.Done()
@@ -190,16 +192,44 @@ func TestFiftyConcurrentJoins(t *testing.T) {
 		}
 		unique[name] = true
 	}
-	for seat := 1; seat <= seatLimit; seat++ {
+	for seat := 1; seat <= students; seat++ {
 		if name := fmt.Sprintf("学生%02d", seat); !unique[name] {
 			t.Errorf("missing seat %s", name)
 		}
 	}
-	exercise(t, app, "POST", "/api/student/current", map[string]string{"device": token(32)}, nil, 409)
-	summary := exercise(t, app, "GET", "/api/teacher/rooms/"+app.active+"/live-seats", nil, teacher, 200)
+	room := "/api/teacher/rooms/" + app.active
+	summary := exercise(t, app, "GET", room+"/live-seats", nil, teacher, 200)
 	var roster struct{ Seats []seatProgress }
-	if err := json.Unmarshal(summary.Body.Bytes(), &roster); err != nil || len(roster.Seats) != seatLimit {
-		t.Fatalf("projection roster should include all 50 seats: %d (%v)", len(roster.Seats), err)
+	if err := json.Unmarshal(summary.Body.Bytes(), &roster); err != nil || len(roster.Seats) != students {
+		t.Fatalf("projection roster should include all %d seats: got %d (%v)", students, len(roster.Seats), err)
+	}
+	for index, entry := range roster.Seats {
+		if entry.Seat != index+1 {
+			t.Fatalf("projection roster is out of order at seat %d: %d", index+1, entry.Seat)
+		}
+	}
+	device := map[string]string{"device": token(32)}
+	joined := exercise(t, app, "POST", "/api/student/current", device, nil, 201)
+	name := fmt.Sprintf("学生%02d", students+1)
+	if !strings.Contains(joined.Body.String(), name) {
+		t.Fatalf("new student should get %s: %s", name, joined.Body.String())
+	}
+	student := joined.Result().Cookies()[0]
+	exercise(t, app, "POST", room+"/activity/1", map[string]bool{"open": true}, teacher, 200)
+	frame := liveFrame{Stage: 1, Draft: liveDraft{Values: []string{"battery"}}}
+	exercise(t, app, "POST", "/api/student/"+app.active+"/live", frame, student, 204)
+	view := exercise(t, app, "GET", room+"/live?seat="+fmt.Sprint(students+1), nil, teacher, 200)
+	if !strings.Contains(view.Body.String(), `"values":["battery"]`) {
+		t.Fatal("projection did not show the new student's progress")
+	}
+	reopened, err := newServer(dataDir, "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	returned := exercise(t, reopened, "POST", "/api/student/current", device, nil, 200)
+	next := exercise(t, reopened, "POST", "/api/student/current", map[string]string{"device": token(32)}, nil, 201)
+	if !strings.Contains(returned.Body.String(), name) || !strings.Contains(next.Body.String(), fmt.Sprintf("学生%02d", students+2)) {
+		t.Fatal("seat numbers should survive restart and keep increasing")
 	}
 }
 

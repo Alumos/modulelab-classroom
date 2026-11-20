@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -60,6 +61,8 @@ func progressFor(person *participant, frame *liveFrame) seatProgress {
 	switch frame.Stage {
 	case 1:
 		entry.Ready = frame.Draft.Flight
+	case 4:
+		entry.Total = len(lightCalls)
 	case 2, 3, 5:
 		entry.Total = len(frame.Draft.Slots)
 		entry.Ready = frame.Stage == 5 && frame.Draft.On && !frame.Draft.Playing
@@ -85,7 +88,7 @@ func (app *server) liveSeats(res http.ResponseWriter, req *http.Request, room *c
 	}
 	seats := make([]seatProgress, 0, len(room.People))
 	for _, person := range room.People {
-		if person.Seat < 1 || person.Seat > seatLimit {
+		if person.Seat < 1 {
 			continue
 		}
 		frame := person.live
@@ -94,6 +97,7 @@ func (app *server) liveSeats(res http.ResponseWriter, req *http.Request, room *c
 		}
 		seats = append(seats, progressFor(person, frame))
 	}
+	sort.Slice(seats, func(left, right int) bool { return seats[left].Seat < seats[right].Seat })
 	jsonOut(res, 200, struct {
 		Revision string         `json:"revision"`
 		Seats    []seatProgress `json:"seats"`
@@ -211,7 +215,7 @@ func (app *server) watchFrame(res http.ResponseWriter, req *http.Request, room *
 		return
 	}
 	seat, err := strconv.Atoi(req.URL.Query().Get("seat"))
-	if err != nil || seat < 1 || seat > seatLimit {
+	if err != nil || seat < 1 {
 		reject(res, 400, "请选择学生。")
 		return
 	}

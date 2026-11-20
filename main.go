@@ -413,8 +413,6 @@ func (app *server) student(res http.ResponseWriter, req *http.Request, parts []s
 	reject(res, 404, "找不到这个活动。")
 }
 
-const seatLimit = 50
-
 func (app *server) currentStudent(res http.ResponseWriter, req *http.Request) {
 	room := app.rooms[app.active]
 	if room == nil {
@@ -445,27 +443,17 @@ func (app *server) currentStudent(res http.ResponseWriter, req *http.Request) {
 		jsonOut(res, 200, app.studentStatus(room, person))
 		return
 	}
-	var used [seatLimit + 1]bool
+	lastSeat := 0
 	for _, person := range room.People {
-		if person.Seat > 0 && person.Seat <= seatLimit {
-			used[person.Seat] = true
-		}
+		lastSeat = max(lastSeat, person.Seat)
 	}
-	if len(room.People) < seatLimit {
-		for seat := 1; seat <= seatLimit; seat++ {
-			if used[seat] {
-				continue
-			}
-			person := &participant{Name: fmt.Sprintf("学生%02d", seat), Seat: seat}
-			room.People[key] = person
-			if app.stored(res, room, func() { delete(room.People, key) }) {
-				app.setCookie(res, "lab_student", input.Device, studentAgeSeconds)
-				jsonOut(res, 201, app.studentStatus(room, person))
-			}
-			return
-		}
+	seat := lastSeat + 1
+	person := &participant{Name: fmt.Sprintf("学生%02d", seat), Seat: seat}
+	room.People[key] = person
+	if app.stored(res, room, func() { delete(room.People, key) }) {
+		app.setCookie(res, "lab_student", input.Device, studentAgeSeconds)
+		jsonOut(res, 201, app.studentStatus(room, person))
 	}
-	reject(res, 409, "本堂课的 50 个座位已满，请告诉老师。")
 }
 
 type result struct {

@@ -178,8 +178,8 @@
     if (!key) { id('join-status').textContent = '请更新浏览器'; return; }
     api('POST', '/api/student/current', {device: key}, function (status, data) {
       if (status !== 200 && status !== 201) {
-        id('join-status').textContent = status === 404 ? '等待老师开启课堂' : (status === 409 ? '课堂座位已满' : '正在重新连接');
-        message(status === 404 || status === 409 ? '' : '请保持本页打开。');
+        id('join-status').textContent = status === 404 ? '等待老师开启课堂' : '正在重新连接';
+        message(status === 404 ? '' : '请保持本页打开。');
         refreshTimer = setTimeout(join, 3200 + Math.random() * 1700);
         return;
       }
@@ -1338,35 +1338,39 @@
     paintedFrame = '';
   }
 
-  function seatCards() {
-    var cards = '';
-    for (var seat = 1; seat <= 50; seat++) {
-      cards += btn('<strong>学生' + pad(seat) + '</strong><span class="seat-activity">未加入</span><span class="seat-progress"></span>', 'watch-seat', 'seat-card',
-        'id="seat-' + seat + '" ' + attr('value', seat) + pressed(false) + ' disabled');
-    }
-    return cards;
+  function seatCard(seat) {
+    return btn('<strong>学生' + pad(seat) + '</strong><span class="seat-activity"></span><span class="seat-progress"></span>', 'watch-seat', 'seat-card',
+      'id="seat-' + seat + '" ' + attr('value', seat) + pressed(false));
+  }
+
+  function closeStudentView() {
+    watchSeat = '';
+    stopWatch();
+    id('watch-panel').hidden = true;
+    id('stage').innerHTML = '';
+    id('stage').removeAttribute('data-empty');
   }
 
   function paintSeat(seat) {
     var entry = roster[seat];
-    var activity = entry ? '等待活动' : '未加入';
+    var card = id('seat-' + seat);
+    if (!entry || !card) return;
+    var activity = '等待活动';
     var progress = '';
-    if (entry && entry.stage) {
+    if (entry.stage) {
       var count = entry.count || 0;
       activity = stages[entry.stage - 1][0];
       progress = ['已装 ' + count + ' / 6', '已选 ' + count + ' / ' + entry.total, '已选 ' + count + ' / ' + entry.total,
-        '已放 ' + count + ' / 3', '已装 ' + count + ' / ' + entry.total, '已体验 ' + count + ' 个模块'][entry.stage - 1];
+        '已放 ' + count + ' / ' + entry.total, '已装 ' + count + ' / ' + entry.total, '已体验 ' + count + ' 个模块'][entry.stage - 1];
       if (entry.done) progress += ' · 已提交';
       else if (entry.ready) progress = entry.stage === 1 ? '已试飞' : '已开机';
     }
-    var card = id('seat-' + seat);
     var selected = String(seat) === watchSeat;
     var key = [activity, progress, selected].join('|');
     if (card.getAttribute('data-summary') === key) return;
     card.setAttribute('data-summary', key);
     card.setAttribute('aria-pressed', String(selected));
-    card.className = 'seat-card' + (entry && entry.stage ? ' seat-working' : '') + (entry && entry.done ? ' seat-done' : '');
-    card.disabled = !entry;
+    card.className = 'seat-card' + (entry.stage ? ' seat-working' : '') + (entry.done ? ' seat-done' : '');
     card.children[1].textContent = activity;
     card.children[2].textContent = progress;
   }
@@ -1387,10 +1391,21 @@
       }
       if (status === 200) {
         rosterVersion = data.revision;
-        roster = {};
-        data.seats.forEach(function (entry) { roster[entry.seat] = entry; });
-        for (var seat = 1; seat <= 50; seat++) paintSeat(seat);
-        id('seat-count').textContent = data.seats.length + ' / 50 已加入';
+        var nextRoster = {};
+        var additions = '';
+        data.seats.forEach(function (entry) {
+          nextRoster[entry.seat] = entry;
+          if (!roster[entry.seat]) additions += seatCard(entry.seat);
+        });
+        Object.keys(roster).forEach(function (seat) {
+          if (!nextRoster[seat]) board.removeChild(id('seat-' + seat));
+        });
+        roster = nextRoster;
+        if (watchSeat && !roster[watchSeat]) closeStudentView();
+        if (additions) board.insertAdjacentHTML('beforeend', additions);
+        data.seats.forEach(function (entry) { paintSeat(entry.seat); });
+        id('seat-count').textContent = data.seats.length + ' 人已加入';
+        id('seat-empty').hidden = data.seats.length !== 0;
       }
       schedule();
     });
@@ -1403,7 +1418,7 @@
     roster = {};
     id('teacher-layout').classList.add('projecting');
     id('classroom').innerHTML = '<section class="monitor-head"><div><h2>学生实时画面</h2><span>' + esc(state.title) + '</span></div><strong id="seat-count"></strong></section>' +
-      '<div id="seat-grid" class="seat-grid" aria-label="学生座位与当前活动进度">' + seatCards() + '</div>' +
+      '<div id="seat-grid" class="seat-grid" aria-label="学生座位与当前活动进度"></div><p id="seat-empty" hidden>还没有学生加入。</p>' +
       '<section id="watch-panel" hidden><div class="watch-bar"><h2 id="watch-status" tabindex="-1"></h2>' + btn('关闭画面', 'close-watch', 'button secondary') + '</div>' +
       '<div id="stage" class="stage mirror-stage" aria-label="学生操作画面"></div></section>' + pager('2 / 2', '‹ 课堂控制');
     fetchSeats();
@@ -1596,11 +1611,7 @@
     },
     'close-watch': function () {
       var previous = watchSeat;
-      watchSeat = '';
-      stopWatch();
-      id('watch-panel').hidden = true;
-      id('stage').innerHTML = '';
-      id('stage').removeAttribute('data-empty');
+      closeStudentView();
       paintSeat(Number(previous));
       id('seat-' + previous).focus();
     },
