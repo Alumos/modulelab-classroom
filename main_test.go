@@ -325,6 +325,15 @@ func TestUpdatedActivities(t *testing.T) {
 		if device.SlotCount < 5 || len(device.Modules)-device.SlotCount < 3 || !unique(itemIDs(device.Modules)) {
 			t.Fatalf("incomplete exercise for %s", device.Name)
 		}
+		bluetooth := 0
+		for _, module := range device.Modules {
+			if module.Name == "蓝牙通讯模块" {
+				bluetooth++
+			}
+		}
+		if bluetooth != 1 || !strings.Contains(device.Info, "蓝牙") {
+			t.Fatalf("%s needs exactly one Bluetooth module and a function clue", device.Name)
+		}
 	}
 	for _, invalid := range [][]string{
 		{"device-chair", "heat", "massage"},
@@ -360,6 +369,8 @@ func TestUpdatedActivities(t *testing.T) {
 		label  string
 	}{
 		{"2", append([]string{"device-phone"}, frame.Draft.Slots...), "一颗螺丝"},
+		{"2", []string{"device-phone", "lens", "mobile", "screen", "batt", "audio", "location", "bluetooth"}, "蓝牙通讯模块"},
+		{"2", []string{"device-car", "", "stereo", "", "", "", ""}, "蓝牙通讯模块"},
 		{"3", []string{"combine", "", "cost", "", ""}, "一定更便宜"},
 		{"3", []string{"combine", "repair", "parallel", "reuse", "cost"}, "一定更便宜"},
 	} {

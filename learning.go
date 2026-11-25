@@ -98,6 +98,12 @@ type learningSummary struct {
 	Overall      learningRate             `json:"overall"`
 	Stages       [stageCount]learningRate `json:"stages"`
 	Distribution [stageCount + 1]float64  `json:"distribution"`
+	Computer     computerProgress         `json:"computer"`
+}
+
+type computerProgress struct {
+	Booted    int `json:"booted"`
+	Submitted int `json:"submitted"`
 }
 
 func summarizeLearning(room *classroom) learningSummary {
@@ -131,6 +137,8 @@ func summarizeLearning(room *classroom) learningSummary {
 			summary.Overall.Milestone++
 		}
 	}
+	computer := summary.Stages[4]
+	summary.Computer = computerProgress{Booted: int(computer.Milestone), Submitted: int(computer.Submitted)}
 	if enrolled := len(room.People); enrolled > 0 {
 		summary.HasStudents = true
 		percentage := func(count float64) float64 { return count * 100 / float64(enrolled) }

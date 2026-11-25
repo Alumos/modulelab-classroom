@@ -173,6 +173,8 @@
       content = null;
       drafts = {};
       deviceTrials = {};
+      ratingPicks = [];
+      reviewing = false;
       root.innerHTML = header('', '') + '<main class="wrap entry"><div class="entry-grid"><section class="entry-copy">' +
         '<h1 id="join-status" aria-live="polite">正在进入课堂</h1>' + feedback() + '</section><div class="blueprint entry-art">' + svg('drone') + '</div></div>' + stageTiles() + '</main>';
     }
@@ -192,6 +194,29 @@
   function studentURL() { return '/api/student/' + code; }
   function roomURL() { return '/api/teacher/rooms/' + (state ? state.code : ''); }
 
+  var ratingPicks = [];
+  var reviewing = false;
+  var ratingLabels = ['我还需要帮助', '我正在尝试', '我能完成', '我能讲清做法', '我能用到新任务'];
+
+  function ratingAt(index) { return (state.ratings || [])[index] || 0; }
+
+  function allRated() { return stages.every(function (info, index) { return ratingAt(index) > 0; }); }
+
+  function canEnter(index) {
+    if (!state.open[index]) return false;
+    for (var earlier = 0; earlier < index; earlier++) {
+      if (state.open[earlier] && !ratingAt(earlier)) return false;
+    }
+    return true;
+  }
+
+  function nextActivity(from) {
+    for (var index = from; index < stages.length; index++) {
+      if (canEnter(index) && !ratingAt(index)) return index;
+    }
+    return -1;
+  }
+
   function startStudent(data) {
     state = data;
     code = data.code;
@@ -201,8 +226,10 @@
     stage = -1;
     root.innerHTML = header(state.title, '<span class="alias">' + esc(state.name) + '</span>') + '<main class="wrap student-layout">' +
       '<nav id="activity-nav" class="activity-nav" aria-label="课堂活动"></nav><section id="stage" class="stage"></section></main>';
-    var first = state.open.indexOf(true);
-    if (first >= 0) loadStage(first, false);
+    var next = nextActivity(0);
+    var first = next < 0 ? state.open.indexOf(true) : next;
+    if (allRated()) renderSummary();
+    else if (first >= 0) loadStage(first, false);
     else { renderNav(); renderWaiting(); }
     schedule();
   }
@@ -210,10 +237,12 @@
   function renderNav() {
     if (!id('activity-nav')) return;
     id('activity-nav').innerHTML = '<ol>' + stages.map(function (info, index) {
+      var enabled = index === stage || canEnter(index);
+      var status = !state.open[index] ? '未开放' : !enabled ? '先完成前一环节自评' : ratingAt(index) ? '已自评' : '';
       return '<li>' + btn('<span class="step-num">' + pad(index + 1) + '</span><span class="step-name">' + info[0] +
-        '</span><span class="step-status">' + (state.done[index] ? '✓' : (!state.open[index] ? '<span class="lock" aria-label="未开放"></span>' : '›')) + '</span>',
-      'navigate', 'nav-step' + (index === stage ? ' current' : '') + (state.open[index] ? '' : ' locked'),
-      attr('index', index) + (index === stage ? ' aria-current="step"' : '') + (!state.open[index] ? ' disabled' : '') + (state.done[index] ? ' aria-label="' + info[0] + '，已提交"' : '')) + '</li>';
+        '</span><span class="step-status" aria-hidden="true">' + (ratingAt(index) ? '✓' : (!enabled ? '<span class="lock"></span>' : '›')) + '</span>',
+      'navigate', 'nav-step' + (index === stage ? ' current' : '') + (enabled ? '' : ' locked'),
+      attr('index', index) + (index === stage ? ' aria-current="step"' : '') + (!enabled ? ' disabled' : '') + (status ? ' aria-label="' + info[0] + '，' + status + '"' : '')) + '</li>';
     }).join('') + '</ol>';
   }
 
@@ -224,10 +253,13 @@
 
   function updateStudent(data) {
     if (!state || data.code !== code || data.version < state.version) return;
-    var changed = state.open.join() !== data.open.join() || state.done.join() !== data.done.join();
+    var ratingsChanged = (state.ratings || []).join() !== (data.ratings || []).join();
+    var changed = state.open.join() !== data.open.join() || state.done.join() !== data.done.join() || ratingsChanged;
     state = data;
     if (!changed) return;
     renderNav();
+    if (reviewing) { if (ratingsChanged && allRated()) renderSummary(); return; }
+    if (id('review-actions')) paintReviewActions();
     if (stage >= 0 && !state.open[stage]) {
       clearTimeout(clock);
       cancelGrabs();
@@ -239,9 +271,10 @@
       content = null;
       renderNav();
       renderWaiting();
-      if (state.open.indexOf(true) >= 0) loadStage(state.open.indexOf(true), false);
+      if (allRated()) renderSummary();
+      else if (nextActivity(0) >= 0) loadStage(nextActivity(0), false);
       else message('老师已关闭刚才的活动，已提交的记录仍会保留。');
-    } else if (stage < 0 && state.open.indexOf(true) >= 0) loadStage(state.open.indexOf(true), false);
+    } else if (stage < 0 && nextActivity(0) >= 0) loadStage(nextActivity(0), false);
   }
 
   function schedule() {
@@ -331,7 +364,8 @@
   }
 
   function loadStage(next, focus) {
-    if (!state.open[next]) return;
+    if (!state.open[next] || (!canEnter(next) && stage !== next)) return;
+    reviewing = false;
     clearTimeout(clock);
     if (draft()) draft().playing = false;
     lastFrame = '';
@@ -452,7 +486,7 @@
     var info = saved.wrong ? saved.notice : active ? active.info : '';
     return '<div class="bench-readout"><div class="bench-count"><strong>' + count + ' / ' + total + '</strong><span>已装好</span></div>' +
       '<div class="effect-bubble' + (saved.wrong ? ' bubble-error' : '') + (saved.notice === 'mounted' ? ' bubble-pop' : '') + '" aria-live="polite"><strong>' + esc(label) + '</strong>' +
-      (info ? '<p>' + esc(info) + '</p>' : '') + '</div></div><div class="inline-actions bench-actions">' + controls + '</div>';
+      (info ? '<p>' + esc(info) + '</p>' : '') + '</div></div>' + (controls ? '<div class="inline-actions bench-actions">' + controls + '</div>' : '');
   }
 
   function choiceSlots(items, heading) {
@@ -724,6 +758,7 @@
     var active = find(content.parts, saved.focus || saved.selected);
     var cables = {psu: ['psu'], keyboard: ['keyboard'], mouse: ['mouse'], disk: ['disk'], 'sata-wire': ['sata-wire', 'disk'], 'hdmi-wire': ['hdmi-wire', 'gpu', 'screen']};
     return '<p class="instruction">把部件拖进对应空槽，再按电源开机。</p>' + assemblyRack(content.parts, saved.slots) +
+      '<div class="pc-workspace"><div class="pc-inspector">' + assemblyReadout(active, saved.playing ? '风扇转动，正在开机' : saved.on ? '开机成功' : '点部件查看用途', saved.slots.filter(Boolean).length, content.wiring.length) + '</div>' +
       '<div class="assembly-board pc-board' + (saved.on ? ' booted' : '') + (saved.playing ? ' starting' : '') + '"><div class="bench-device">' +
       svg('pc-workbench', 'assembly-art') + '<div class="bench-layer cpu-fan"><svg class="assembly-art" viewBox="57 64 32 32" aria-hidden="true" focusable="false">' +
       '<use xlink:href="' + artURL + 'pc-fan" width="320" height="200"></use></svg></div>' + (saved.on ? svg('pc-leds', 'assembly-art') : '') +
@@ -731,9 +766,9 @@
         return cables[part].every(function (end) { return saved.slots.indexOf(end) >= 0; }) ? svg('cable-' + part, 'assembly-art') : '';
       }).join('') + content.wiring.map(function (part, index) {
         return sockets(find(content.parts, part), String(index), !!saved.slots[index]);
-      }).join('') + '</div></div>' + assemblyReadout(active, saved.playing ? '风扇转动，正在开机' : saved.on ? '开机成功' : '等待安装', saved.slots.filter(Boolean).length, content.wiring.length,
+      }).join('') + '</div></div></div><div class="inline-actions bench-actions pc-actions">' +
         btn(saved.playing ? '开机中…' : saved.on ? '已开机' : '按下电源', 'boot', 'button primary', 'id="boot"' + (saved.on ? ' disabled' : '')) +
-        btn('拆下全部', 'reset', 'button secondary', 'id="reset"' + (saved.playing ? ' disabled' : '')));
+        btn('拆下全部', 'reset', 'button secondary', 'id="reset"' + (saved.playing ? ' disabled' : '')) + '</div>';
   }
 
   var hillside = '<path d="M0 297l93-57 45 23 59-40 103 76 85-54 58 30 96-62 101 67v90H0z" fill="#344a51"/>' +
@@ -908,11 +943,61 @@
     draw();
   }
 
+  function ratingPicker() {
+    var picked = ratingPicks[stage] || ratingAt(stage);
+    return '<fieldset class="self-rating"><legend>给自己打星</legend><div class="rating-stars">' + ratingLabels.map(function (label, index) {
+      var value = index + 1;
+      return btn(picked >= value ? '★' : '☆', 'rate', 'rating-star' + (picked >= value ? ' lit' : ''),
+        'id="rate-' + value + '" ' + attr('value', value) + pressed(picked === value) + ' aria-label="' + value + ' 星：' + label + '"');
+    }).join('') + '</div><p id="rating-caption" aria-live="polite">' + (picked ? ratingLabels[picked - 1] : '选 1 到 5 颗星，说说自己学得怎么样。') + '</p></fieldset>';
+  }
+
+  function paintReviewActions() {
+    var panel = id('review-actions');
+    var next = nextActivity(stage + 1);
+    var html = '';
+    if (ratingAt(stage)) {
+      if (allRated()) html = btn('查看课堂总评', 'summary', 'button primary');
+      else if (next >= 0) html = btn('进入下一环节', 'next-activity', 'button primary', attr('index', next));
+      else if (nextActivity(0) >= 0) html = btn('继续未自评环节', 'next-activity', 'button primary', attr('index', nextActivity(0)));
+      else html = '<span class="review-wait">等待老师开放未自评的环节</span>';
+    }
+    if (panel.getAttribute('data-action-markup') !== html) {
+      panel.setAttribute('data-action-markup', html);
+      panel.innerHTML = html;
+    }
+  }
+
+  function renderSummary(focus) {
+    if (!allRated()) return;
+    clearTimeout(clock);
+    cancelGrabs();
+    if (draft()) draft().playing = false;
+    stage = -1;
+    content = null;
+    generation++;
+    reviewing = true;
+    renderNav();
+    var total = 0;
+    var rows = stages.map(function (info, index) {
+      var rating = ratingAt(index);
+      total += rating;
+      return '<li><span class="step-num">' + pad(index + 1) + '</span><b>' + esc(info[0]) + '</b><span class="summary-stars" aria-label="' + rating + ' 星">' +
+        '<span aria-hidden="true">' + new Array(rating + 1).join('★') + new Array(6 - rating).join('☆') + '</span></span></li>';
+    }).join('');
+    id('stage').innerHTML = '<div class="review-heading"><div><h1 id="stage-title" tabindex="-1">我的课堂总评</h1><p>六项自评已完成</p></div>' +
+      '<strong><span aria-hidden="true">★</span> ' + total + ' <small>/ 30 星</small></strong></div><ol class="review-list">' + rows + '</ol>';
+    if (focus) id('stage-title').focus();
+    queueFrame();
+  }
+
   function renderStage(focus) {
     if (!content || !state || stage < 0) return;
     var activities = [stageOne, stageTwo, stageThree, stageFour, stageFive, stageSix];
-    id('stage').innerHTML = title(stage) + activities[stage]() + '<div id="praise" class="praise" role="status" hidden></div><div class="stage-footer">' + btn(state.done[stage] ? '更新记录' : '提交记录', 'submit-stage', 'button primary',
-      'id="submit-stage"' + (submitting || draft().playing ? ' disabled' : '')) + feedback() + '</div>';
+    id('stage').innerHTML = title(stage) + activities[stage]() + '<div id="praise" class="praise" role="status" hidden></div>' + ratingPicker() + '<div class="stage-footer">' +
+      btn(ratingAt(stage) ? '更新记录和自评' : '保存自评并提交', 'submit-stage', 'button' + (ratingAt(stage) ? '' : ' primary'),
+      'id="submit-stage"' + (submitting || draft().playing ? ' disabled' : '')) + '<div id="review-actions"></div>' + feedback() + '</div>';
+    paintReviewActions();
     if (stage === 0 || stage === 4) fitBoard(id('stage'));
     if (stage === 0 && draft().playing) {
       var flying = draft();
@@ -993,16 +1078,18 @@
       if (!saved.on) { message('请先接好部件并开机。', 'error'); return; }
       values = saved.slots;
     }
+    var rating = ratingPicks[stage] || ratingAt(stage);
+    if (!rating) { message('先给自己选 1 到 5 颗星。', 'error'); id('rate-1').focus(); return; }
     submitting = true;
     id('submit-stage').disabled = true;
     message('正在保存…');
     var origin = generation;
-    api('POST', studentURL() + '/activity/' + (stage + 1), {values: values, text: saved.text}, function (status, data) {
+    api('POST', studentURL() + '/activity/' + (stage + 1), {values: values, text: saved.text, rating: rating}, function (status, data) {
       submitting = false;
       if (id('submit-stage') && draft()) id('submit-stage').disabled = draft().playing;
       if (status === 200) updateStudent(data);
       if (!state || origin !== generation) return;
-      if (status === 200) { renderStage('submit-stage'); celebrate(); }
+      if (status === 200) { ratingPicks[stage] = 0; renderStage('submit-stage'); celebrate(); }
       else { failed(data); if (status === 401 || status === 409 || status === 423 || status === 410) poll(); }
     });
   }
@@ -1331,7 +1418,8 @@
       if (status !== 200) { id('result-list').textContent = '暂时无法读取记录。'; return; }
       id('result-list').innerHTML = data.length ? data.map(function (item) {
         return '<article class="record"><h3>' + esc(item.name) + '</h3><div class="tags">' +
-          (item.activity ? '<span class="pill">' + esc(item.activity) + '（旧活动）</span>' : '') + item.values.map(function (value) { return '<span class="pill">' + esc(value) + '</span>'; }).join('') + '</div>' + (item.text ? '<p>' + esc(item.text) + '</p>' : '') + '</article>';
+          (item.activity ? '<span class="pill">' + esc(item.activity) + '（旧活动）</span>' : '') + (item.rating ? '<span class="pill rating-pill">自评 ' + item.rating + ' 星</span>' : '') +
+          item.values.map(function (value) { return '<span class="pill">' + esc(value) + '</span>'; }).join('') + '</div>' + (item.text ? '<p>' + esc(item.text) + '</p>' : '') + '</article>';
       }).join('') : '<p class="empty-results">还没有提交记录。</p>';
     });
   }
@@ -1547,7 +1635,10 @@
     data.stages.forEach(function (rate, index) { if (rate.milestone > data.stages[best].milestone) best = index; });
     var milestone = data.stages[best].milestone;
     var highlight = milestone > 0 ? learningMilestones[best] + ' ' + percent(milestone) : overall.attempted > 0 ? '已开始动手 ' + percent(overall.attempted) : '';
-    panel.innerHTML = '<div class="learning-summary">' + [['参与过活动', overall.attempted], ['达成过观察点', overall.milestone], ['提交过记录', overall.submitted]].map(function (entry) {
+    panel.innerHTML = '<section class="computer-progress"><div><h3>05 · 电脑组装进度</h3><p>完成装配并成功开机即计入</p></div>' +
+      '<div><span>已开机</span><strong>' + data.computer.booted + '<small> 人</small></strong></div>' +
+      '<div><span>已提交</span><strong>' + data.computer.submitted + '<small> 人</small></strong></div></section>' +
+      '<div class="learning-summary">' + [['参与过活动', overall.attempted], ['达成过观察点', overall.milestone], ['提交过记录', overall.submitted]].map(function (entry) {
       return '<div><span>' + entry[0] + '</span><strong>' + (data.hasStudents ? esc(percent(entry[1])) : '—') + '</strong></div>';
     }).join('') + '</div>' + (highlight ? '<p class="learning-highlight"><b>学习亮点</b> ' + esc(highlight) + '</p>' : '') +
       (data.hasStudents ? '<div class="learning-charts">' + learningBars(data) + '<div class="learning-side">' + learningRadar(data) + learningDistribution(data) + '</div></div>' +
@@ -1666,6 +1757,21 @@
       button.textContent = fullMotion ? '跟随系统' : '播放完整动画';
     },
     navigate: function (button) { loadStage(Number(button.getAttribute('data-index')), true); },
+    rate: function (button, value) {
+      var rating = Number(value);
+      ratingPicks[stage] = rating;
+      ratingLabels.forEach(function (label, index) {
+        var star = id('rate-' + (index + 1));
+        var filled = index < rating;
+        star.classList.toggle('lit', filled);
+        star.textContent = filled ? '★' : '☆';
+        star.setAttribute('aria-pressed', String(index + 1 === rating));
+      });
+      id('rating-caption').textContent = ratingLabels[rating - 1];
+      message('');
+    },
+    'next-activity': function (button) { loadStage(Number(button.getAttribute('data-index')), true); },
+    summary: function () { renderSummary(true); },
     retry: function () { loadStage(stage, true); },
     fly: playFlight,
     project: function (button, value) {
@@ -1741,7 +1847,7 @@
         renderStage(button.id);
         return;
       }
-      if (!value && button.hasAttribute('data-mounted')) { draft().focus = button.getAttribute('data-mounted'); draft().wrong = false; draft().notice = ''; renderStage(button.id); return; }
+      if ((!value || stage === 4) && button.hasAttribute('data-mounted')) { draft().focus = button.getAttribute('data-mounted'); draft().wrong = false; draft().notice = ''; renderStage(button.id); return; }
       if (!value) { message(stage === 3 ? '先选调用积木，再点这里。' : choice ? '先选择下方的一张卡片。' : '先选一个部件，再点对应空槽。'); return; }
       place(value, target);
     },

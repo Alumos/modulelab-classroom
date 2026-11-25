@@ -61,26 +61,36 @@ var research = []project{
 
 type deviceProject struct {
 	item
-	Modules   []item `json:"modules"`
-	SlotCount int    `json:"slotCount"`
+	Modules           []item `json:"modules"`
+	SlotCount         int    `json:"slotCount"`
+	previousSlotCount int
 }
 
 var devices = []deviceProject{
 	{item{"device-chair", "按摩椅", "这台按摩椅能揉捏肩背、加热靠背，还能通过充放气挤压小腿。扶手上可以选择按摩程序，也能用蓝牙播放音乐。", "chair"},
-		choices("heat:加热模块", "massage:揉捏驱动模块", "cool:冷风制冷模块", "music:蓝牙音频模块", "stitch:一根缝线", "air:气囊按摩模块", "panel:按键控制模块", "water:净水过滤模块"),
-		5},
-	{item{"device-phone", "智能手机", "这部手机可以显示画面并响应触摸，能拍照、通过移动网络通话和上网，也能播放声音、导航。它充好电后可以带出门使用。", "phone"},
-		choices("projector:投影模块", "lens:摄像模块", "mobile:移动通信模块", "screen:触控显示模块", "batt:电池模块", "screw:一颗螺丝", "audio:音频模块", "location:卫星定位模块", "heat:加热模块"),
-		6},
-	{item{"device-rice", "智能电饭锅", "这台电饭锅能给米饭加热，并持续检测锅里的温度。可以按键选择煮饭或保温程序，屏幕会显示剩余时间。", "cooker"},
-		choices("heater:加热模块", "sensor:温度检测模块", "lens:摄像模块", "program:程序控制模块", "tag:品牌贴纸", "keys:按键输入模块", "display:时间显示模块", "location:卫星定位模块"),
-		5},
-	{item{"device-car", "电动汽车", "这辆电动汽车可以前进、转弯、刹车，能用车灯照明和提示转向。电池为车辆供电，空调能调节车内温度。", "car"},
-		choices("paint:车门油漆", "drive:电机驱动模块", "brake:制动模块", "stereo:蓝牙音响模块", "lights:照明信号模块", "steer:转向模块", "battery:动力电池模块", "ac:空调模块", "clean:吸尘模块"),
-		6},
-	{item{"device-vacuum", "扫地机器人", "这台扫地机器人会沿路线移动，先用刷子扫起灰尘，再把灰尘吸进尘盒。它遇到障碍会绕开，还会定位并找到充电座。", "vacuum"},
-		choices("air:空气加湿模块", "wheels:行走模块", "brush:滚刷清扫模块", "shell:外壳的一角", "suction:吸尘模块", "avoid:避障模块", "charge:充电模块", "location:定位导航模块", "heat:加热模块"),
-		6},
+		choices("heat:加热模块", "massage:揉捏驱动模块", "cool:冷风制冷模块", "music:"+bluetoothName, "stitch:一根缝线", "air:气囊按摩模块", "panel:按键控制模块", "water:净水过滤模块"),
+		5, 5},
+	{item{"device-phone", "智能手机", "这部手机能触屏操作、拍照、通过移动网络通话和上网，还能播音、导航和连接蓝牙耳机。电池充好后可以带出门。", "phone"},
+		choices("projector:投影模块", "lens:摄像模块", "mobile:移动通信模块", "screen:触控显示模块", "batt:电池模块", "screw:一颗螺丝", "audio:音频模块", "location:卫星定位模块", "heat:加热模块", "bluetooth:"+bluetoothName),
+		7, 6},
+	{item{"device-rice", "智能电饭锅", "这款电饭锅可以加热、测温，按键选择煮饭或保温，屏幕显示剩余时间。手机靠近时，还可通过蓝牙查看煮饭进度。", "cooker"},
+		choices("heater:加热模块", "sensor:温度检测模块", "lens:摄像模块", "program:程序控制模块", "tag:品牌贴纸", "keys:按键输入模块", "display:时间显示模块", "location:卫星定位模块", "bluetooth:"+bluetoothName),
+		6, 5},
+	{item{"device-car", "电动汽车", "这辆电动汽车靠电池供电，能前进、转弯和刹车，有照明和转向灯。空调可以调温，手机还能通过蓝牙连接车机播放音乐。", "car"},
+		choices("paint:车门油漆", "drive:电机驱动模块", "brake:制动模块", "stereo:"+bluetoothName, "lights:照明信号模块", "steer:转向模块", "battery:动力电池模块", "ac:空调模块", "clean:吸尘模块", "heater:煮饭加热模块"),
+		7, 6},
+	{item{"device-vacuum", "扫地机器人", "这款扫地机器人会沿路线移动，刷起并吸走灰尘，还能避障、定位和回充。第一次使用时，可以通过蓝牙和手机配对。", "vacuum"},
+		choices("air:空气加湿模块", "wheels:行走模块", "brush:滚刷清扫模块", "shell:外壳的一角", "suction:吸尘模块", "avoid:避障模块", "charge:充电模块", "location:定位导航模块", "heat:加热模块", "bluetooth:"+bluetoothName),
+		7, 6},
+}
+
+const bluetoothName = "蓝牙通讯模块"
+
+func (device deviceProject) acceptsSlots(slots []string) bool {
+	if len(slots) != device.SlotCount && len(slots) != device.previousSlotCount {
+		return false
+	}
+	return validChoiceSlots(slots, len(slots), device.Modules)
 }
 
 func choices(entries ...string) []item {
@@ -298,7 +308,7 @@ func validate(idx int, values []string, text string) string {
 		}
 	case 1:
 		if len(values) > 0 {
-			if device := deviceByID(values[0]); device != nil && validChoiceAnswer(values[1:], device.SlotCount, device.Modules) {
+			if device := deviceByID(values[0]); device != nil && device.acceptsSlots(values[1:]) && occupied(values[1:]) > 0 {
 				return ""
 			}
 		}

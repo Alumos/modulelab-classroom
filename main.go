@@ -39,6 +39,7 @@ type submission struct {
 	Values []string  `json:"values"`
 	Text   string    `json:"text,omitempty"`
 	At     time.Time `json:"at"`
+	Rating int       `json:"rating,omitempty"`
 }
 
 type participant struct {
@@ -277,14 +278,19 @@ func (app *server) status(room *classroom) roomStatus {
 
 func (app *server) studentStatus(room *classroom, person *participant) any {
 	var done [stageCount]bool
+	var ratings [stageCount]int
 	for idx, answer := range person.Answers {
-		done[idx] = currentAnswer(idx, answer) != nil
+		if currentAnswer(idx, answer) != nil {
+			done[idx] = true
+			ratings[idx] = answer.Rating
+		}
 	}
 	return struct {
 		roomStatus
-		Name string           `json:"name"`
-		Done [stageCount]bool `json:"done"`
-	}{app.status(room), person.Name, done}
+		Name    string           `json:"name"`
+		Done    [stageCount]bool `json:"done"`
+		Ratings [stageCount]int  `json:"ratings"`
+	}{app.status(room), person.Name, done, ratings}
 }
 
 func (app *server) teacherStatus(room *classroom) any {
@@ -390,6 +396,7 @@ func (app *server) student(res http.ResponseWriter, req *http.Request, parts []s
 				var input struct {
 					Values []string
 					Text   string
+					Rating *int
 				}
 				if !decode(res, req, &input) {
 					return
@@ -400,7 +407,17 @@ func (app *server) student(res http.ResponseWriter, req *http.Request, parts []s
 					return
 				}
 				old := person.Answers[idx]
-				person.Answers[idx] = &submission{input.Values, input.Text, time.Now().UTC()}
+				rating := 0
+				if input.Rating != nil {
+					rating = *input.Rating
+					if rating < 1 || rating > 5 {
+						reject(res, 400, "请为这项活动选择 1 到 5 颗星。")
+						return
+					}
+				} else if currentAnswer(idx, old) != nil {
+					rating = old.Rating
+				}
+				person.Answers[idx] = &submission{Values: input.Values, Text: input.Text, At: time.Now().UTC(), Rating: rating}
 				if app.stored(res, room, func() { person.Answers[idx] = old }) {
 					room.recordLearning(person, idx, submittedEvidence(idx, input.Values))
 					if person.live != nil && person.live.Stage == idx+1 {
@@ -465,13 +482,14 @@ type result struct {
 	Text     string    `json:"text,omitempty"`
 	At       time.Time `json:"at"`
 	Activity string    `json:"activity,omitempty"`
+	Rating   int       `json:"rating,omitempty"`
 }
 
 func results(room *classroom, idx int) []result {
 	items := make([]result, 0)
 	for _, person := range room.People {
 		if answer := person.Answers[idx]; answer != nil {
-			entry := result{Name: person.Name, Values: displayValues(idx, answer.Values), Text: answer.Text, At: answer.At, Activity: legacyActivity(idx, answer.Values)}
+			entry := result{Name: person.Name, Values: displayValues(idx, answer.Values), Text: answer.Text, At: answer.At, Activity: legacyActivity(idx, answer.Values), Rating: answer.Rating}
 			items = append(items, entry)
 		}
 	}
@@ -495,7 +513,7 @@ func exportRoom(res http.ResponseWriter, room *classroom) {
 	_, _ = io.WriteString(res, "\ufeff")
 	writer := csv.NewWriter(res)
 	writer.UseCRLF = true
-	_ = writer.Write([]string{"昵称", "活动", "选择与操作", "课堂记录", "提交时间（北京时间）"})
+	_ = writer.Write([]string{"昵称", "活动", "选择与操作", "课堂记录", "提交时间（北京时间）", "自评星数"})
 	chinaTime := time.FixedZone("UTC+8", 8*3600)
 	for idx := range stageCount {
 		for _, item := range results(room, idx) {
@@ -503,7 +521,11 @@ func exportRoom(res http.ResponseWriter, room *classroom) {
 			if activity == "" {
 				activity = stageNames[idx]
 			}
-			_ = writer.Write([]string{csvCell(item.Name), activity, csvCell(strings.Join(item.Values, "；")), csvCell(item.Text), item.At.In(chinaTime).Format("2006-01-02 15:04:05")})
+			rating := ""
+			if item.Rating > 0 {
+				rating = strconv.Itoa(item.Rating)
+			}
+			_ = writer.Write([]string{csvCell(item.Name), activity, csvCell(strings.Join(item.Values, "；")), csvCell(item.Text), item.At.In(chinaTime).Format("2006-01-02 15:04:05"), rating})
 		}
 	}
 	writer.Flush()

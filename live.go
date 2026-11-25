@@ -141,7 +141,7 @@ func validLive(stage int, draft liveDraft) bool {
 		return validItem(drone, draft.Selected) && validItem(drone, draft.Focus) && containsOnly(draft.Values, itemIDs(drone)) && draft.Step >= -1 && draft.Step <= 6
 	case 2:
 		device := deviceByID(draft.Selected)
-		return device != nil && validItem(device.Modules, draft.Focus) && validChoiceSlots(draft.Slots, device.SlotCount, device.Modules)
+		return device != nil && validItem(device.Modules, draft.Focus) && device.acceptsSlots(draft.Slots)
 	case 3:
 		return validItem(advantageOptions, draft.Focus) && validChoiceSlots(draft.Slots, advantageSlotCount, advantageOptions)
 	case 4:
