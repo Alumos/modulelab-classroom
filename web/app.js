@@ -23,7 +23,9 @@
   var generation = 0;
   var detailRequest = 0;
   var detailStage = 0;
-  var projection = false;
+  var teacherPage = 1;
+  var learningRevision = '';
+  var praisePicks = [];
   var submitting = false;
   var dragging = '';
   var hoverSlot;
@@ -250,11 +252,13 @@
   function poll() {
     if (!state) return;
     if (document.hidden || roomSwitch) { schedule(); return; }
-    if (teacher && projection) { fetchSeats(); return; }
+    if (teacher && teacherPage === 2) { fetchSeats(); return; }
+    if (teacher && teacherPage === 3) { fetchLearning(); return; }
+    var originPage = teacherPage;
     var activeCode = state.code;
     var reset = state.reset;
     api('GET', teacher ? roomURL() : studentURL() + '/status?since=' + state.version, null, function (status, data) {
-      if (!state || state.code !== activeCode || (!teacher && state.reset !== reset)) return;
+      if (!state || state.code !== activeCode || (teacher ? teacherPage !== originPage : state.reset !== reset)) return;
       if (status === 200) {
         if (teacher) updateRoom(data);
         else if (reset !== data.reset) { join(); return; }
@@ -907,7 +911,7 @@
   function renderStage(focus) {
     if (!content || !state || stage < 0) return;
     var activities = [stageOne, stageTwo, stageThree, stageFour, stageFive, stageSix];
-    id('stage').innerHTML = title(stage) + activities[stage]() + '<div class="stage-footer">' + btn(state.done[stage] ? '更新记录' : '提交记录', 'submit-stage', 'button primary',
+    id('stage').innerHTML = title(stage) + activities[stage]() + '<div id="praise" class="praise" role="status" hidden></div><div class="stage-footer">' + btn(state.done[stage] ? '更新记录' : '提交记录', 'submit-stage', 'button primary',
       'id="submit-stage"' + (submitting || draft().playing ? ' disabled' : '')) + feedback() + '</div>';
     if (stage === 0 || stage === 4) fitBoard(id('stage'));
     if (stage === 0 && draft().playing) {
@@ -925,6 +929,50 @@
       } : null);
     }
     queueFrame();
+  }
+
+  var praises = [
+    ['漂亮！六个模块一起动起来了。', '试飞成功！你让无人机的部件成了一支团队。', '从零件到起飞，这一关你做到了！', '看，装好的无人机在你手里飞起来了！'],
+    ['你从设备的功能出发，像小工程师一样思考。', '选出你认为需要的模块，就是一次认真的探索。', '做得好！你把整台设备拆开来想了。', '你的模块清单已经整理好啦！'],
+    ['你把自己的想法说出来了，这很棒！', '好样的！你从生活里的问题想到了模块化。', '这一关，你留下了自己的思考。', '你的选择给课堂讨论带来了新线索！'],
+    ['漂亮！同一个彩灯模块接上了五个事件。', '你把重复的积木变成了可以复用的模块！', '五处调用都接好了，真有程序员的样子！', '把积木收进模块，再让它到处帮忙，你做到了！'],
+    ['电脑成功开机！你把部件和线缆都接好了。', '拆开的零件在你手里变成了一台能开机的电脑！', '每条线都接到位了，小小装机师真棒！', '屏幕亮起来了！你的装配成功了。'],
+    ['你给无人机解锁了一种新用途！', '换个模块就能换个本领，你亲手试出来了。', '好样的！你用加装模块的方式改造了无人机。', '你的改造方案已经交给老师啦！']
+  ];
+
+  function celebrate() {
+    var pool = praises[stage];
+    var pick = Math.floor(Math.random() * pool.length);
+    if (pick === praisePicks[stage]) pick = (pick + 1) % pool.length;
+    praisePicks[stage] = pick;
+    var panel = id('praise');
+    var gentle = reducedMotion && reducedMotion.matches && !fullMotion;
+    var sparks = gentle ? '' : '<i></i><i></i><i></i><i></i><i></i><i></i>';
+    panel.hidden = false;
+    panel.innerHTML = '<span class="praise-badge" aria-hidden="true"><b>★</b>' + sparks + '</span><div><span>任务完成</span><strong>' + esc(pool[pick]) + '</strong></div>';
+    var bounds = panel.getBoundingClientRect();
+    if (bounds.top < 0 || bounds.bottom > window.innerHeight) panel.scrollIntoView(false);
+    if (gentle) return;
+    var star = panel.querySelector('.praise-badge b');
+    var particles = panel.querySelectorAll('.praise-badge i');
+    var started = flightNow();
+    function draw() {
+      if (!document.documentElement.contains(panel)) return;
+      var progress = interval(flightNow() - started, 0, 920);
+      var hop = interval(progress, 0, .56);
+      star.style.transform = 'translateY(' + (-9 * Math.sin(Math.PI * hop)) + 'px) rotate(' + (-24 * (1 - hop)) + 'deg)';
+      Array.prototype.forEach.call(particles, function (dot, index) {
+        var angle = Math.PI * (index + .25) / 3;
+        var distance = 10 + 33 * (1 - (1 - progress) * (1 - progress));
+        dot.style.transform = 'translate(' + Math.cos(angle) * distance + 'px,' + Math.sin(angle) * distance + 'px) rotate(35deg)';
+        dot.style.opacity = String(1 - interval(progress, .33, 1));
+      });
+      if (progress < 1) {
+        if (window.requestAnimationFrame) window.requestAnimationFrame(draw);
+        else setTimeout(draw, 16);
+      }
+    }
+    draw();
   }
 
   function submitStage() {
@@ -951,10 +999,10 @@
     var origin = generation;
     api('POST', studentURL() + '/activity/' + (stage + 1), {values: values, text: saved.text}, function (status, data) {
       submitting = false;
-      if (id('submit-stage')) id('submit-stage').disabled = draft().playing;
+      if (id('submit-stage') && draft()) id('submit-stage').disabled = draft().playing;
       if (status === 200) updateStudent(data);
       if (!state || origin !== generation) return;
-      if (status === 200) { renderStage('submit-stage'); message('记录已交给老师。', 'success'); }
+      if (status === 200) { renderStage('submit-stage'); celebrate(); }
       else { failed(data); if (status === 401 || status === 409 || status === 423 || status === 410) poll(); }
     });
   }
@@ -1169,15 +1217,25 @@
   function switchRoom(next) {
     if (!next) { if (state) id('classrooms').value = state.code; return; }
     var query = ++generation;
+    var page = teacherPage;
     roomSwitch = true;
-    projection = false;
     stopWatch();
     api('GET', '/api/teacher/rooms/' + next, null, function (status, data) {
       if (query !== generation) return;
       roomSwitch = false;
       if (status === 401) { access(data.error); return; }
-      if (status === 200) { state = data; detailStage = 0; renderRoom(); message(''); }
-      else { id('classrooms').value = state ? state.code : ''; failed(data); }
+      if (status === 200) {
+        state = data;
+        detailStage = 0;
+        if (page === 3) { renderLearning(); return; }
+        renderRoom();
+        message('');
+      }
+      else {
+        id('classrooms').value = state ? state.code : '';
+        if (state) renderRoom();
+        failed(data);
+      }
       schedule();
     });
   }
@@ -1202,7 +1260,6 @@
       detailStage = 0;
       generation++;
       roomSwitch = false;
-      projection = false;
       watchSeat = '';
       stopWatch();
       state = data;
@@ -1215,7 +1272,9 @@
   function shareURL() { return location.protocol + '//' + location.host + '/'; }
 
   function renderRoom() {
+    teacherPage = 1;
     id('teacher-layout').classList.remove('projecting');
+    id('teacher-layout').classList.remove('learning-view');
     id('classrooms').value = state.code;
     id('classroom').innerHTML = '<section class="room-banner"><div><h2>' + esc(state.title) + '</h2><span class="room-state">' + (state.active ? '当前课堂' : '已结束') + '</span></div>' +
       (state.active ? '<div class="share-box"><label for="share">学生链接</label><div><input id="share" readonly value="' + esc(shareURL()) + '">' +
@@ -1230,7 +1289,7 @@
       }).join('') + '</ol></section><section class="teacher-results"><div class="section-head"><h2>学生记录</h2><select id="detail-stage" aria-label="查看活动记录">' + stages.map(function (info, index) {
         return '<option value="' + index + '"' + (detailStage === index ? ' selected' : '') + '>' + pad(index + 1) + ' ' + info[0] + '</option>';
       }).join('') + '</select></div><div id="result-list" class="result-list"></div></section>' +
-      (state.active ? pager('1 / 2', '投屏展示 ›') : '');
+      pager();
     paintRoom();
     loadResults();
   }
@@ -1261,8 +1320,8 @@
     var activeChanged = data.active !== state.active;
     var changed = data.version !== state.version;
     state = data;
-    if (activeChanged) { projection = false; stopWatch(); renderRoom(); message('这堂课已结束。'); }
-    else if (!projection && changed) { paintRoom(); loadResults(); }
+    if (activeChanged) { stopWatch(); renderRoom(); message('这堂课已结束。'); }
+    else if (teacherPage === 1 && changed) { paintRoom(); loadResults(); }
   }
 
   function loadResults() {
@@ -1270,8 +1329,8 @@
     api('GET', roomURL() + '/results?stage=' + (detailStage + 1), null, function (status, data) {
       if (request !== detailRequest || !id('result-list')) return;
       if (status !== 200) { id('result-list').textContent = '暂时无法读取记录。'; return; }
-      id('result-list').innerHTML = data.length ? data.map(function (item, index) {
-        return '<article class="record"><h3>' + (projection ? '作品 ' + pad(index + 1) : esc(item.name)) + '</h3><div class="tags">' +
+      id('result-list').innerHTML = data.length ? data.map(function (item) {
+        return '<article class="record"><h3>' + esc(item.name) + '</h3><div class="tags">' +
           (item.activity ? '<span class="pill">' + esc(item.activity) + '（旧活动）</span>' : '') + item.values.map(function (value) { return '<span class="pill">' + esc(value) + '</span>'; }).join('') + '</div>' + (item.text ? '<p>' + esc(item.text) + '</p>' : '') + '</article>';
       }).join('') : '<p class="empty-results">还没有提交记录。</p>';
     });
@@ -1304,9 +1363,9 @@
       if (status === 401) { access(data.error); return; }
       if (status === 200) {
         updateRoom(data);
-        if (!projection) { paintRoom(); message('本堂课的学生数据已清除。', 'success'); }
+        if (teacherPage === 1) { paintRoom(); message('本堂课的学生数据已清除。', 'success'); }
       } else {
-        if (!projection) { paintRoom(); failed(data); }
+        if (teacherPage === 1) { paintRoom(); failed(data); }
         if (status === 409 || status === 410) poll();
       }
     });
@@ -1325,8 +1384,12 @@
     } else fallback();
   }
 
-  function pager(page, label) {
-    return '<div class="page-turn"><span>' + page + '</span>' + btn(label, 'projection', 'button primary', 'id="projection"') + '</div>';
+  function pager() {
+    return '<nav class="page-turn" aria-label="教师页面">' + ['课堂控制', '投屏展示', '数据看板'].map(function (label, index) {
+      var page = index + 1;
+      return btn(label, 'teacher-page', 'button' + (page === teacherPage ? ' primary' : ''), 'id="teacher-page-' + page + '" ' + attr('value', page) +
+        (page === teacherPage ? ' aria-current="page"' : '') + (page === 2 && !state.active ? ' disabled' : ''));
+    }).join('') + '</nav>';
   }
 
   function stopWatch() {
@@ -1380,10 +1443,9 @@
     var activeCode = state.code;
     var board = id('seat-grid');
     api('GET', roomURL() + '/live-seats?since=' + rosterVersion, null, function (status, data) {
-      if (!projection || !state || state.code !== activeCode || id('seat-grid') !== board) return;
+      if (teacherPage !== 2 || roomSwitch || !state || state.code !== activeCode || id('seat-grid') !== board) return;
       if (status === 401) { access(data.error); return; }
       if (status === 410) {
-        projection = false;
         stopWatch();
         renderRoom();
         poll();
@@ -1412,16 +1474,113 @@
   }
 
   function renderProjection() {
+    teacherPage = 2;
     stopWatch();
     watchSeat = '';
     rosterVersion = '';
     roster = {};
     id('teacher-layout').classList.add('projecting');
+    id('teacher-layout').classList.remove('learning-view');
     id('classroom').innerHTML = '<section class="monitor-head"><div><h2>学生实时画面</h2><span>' + esc(state.title) + '</span></div><strong id="seat-count"></strong></section>' +
       '<div id="seat-grid" class="seat-grid" aria-label="学生座位与当前活动进度"></div><p id="seat-empty" hidden>还没有学生加入。</p>' +
       '<section id="watch-panel" hidden><div class="watch-bar"><h2 id="watch-status" tabindex="-1"></h2>' + btn('关闭画面', 'close-watch', 'button secondary') + '</div>' +
-      '<div id="stage" class="stage mirror-stage" aria-label="学生操作画面"></div></section>' + pager('2 / 2', '‹ 课堂控制');
+      '<div id="stage" class="stage mirror-stage" aria-label="学生操作画面"></div></section>' + pager();
     fetchSeats();
+  }
+
+  var learningMilestones = ['完成联动试飞', '摆满设备模块槽', '表达多项观点', '封装彩灯积木', '完成整机开机', '探索两种以上改装'];
+
+  function percent(value) {
+    if (value > 0 && value < .05) return '<0.1%';
+    if (value < 100 && value > 99.95) return '>99.9%';
+    return String(Math.round(value * 10) / 10) + '%';
+  }
+
+  function learningBar(value, kind, label) {
+    var text = esc(percent(value));
+    return '<div class="learning-bar-row"><svg class="learning-track ' + kind + '" aria-hidden="true" focusable="false"><rect width="' + value + '%" height="100%"/></svg>' +
+      '<strong aria-label="' + label + ' ' + text + '">' + text + '</strong></div>';
+  }
+
+  function learningBars(data) {
+    return '<section class="learning-chart"><h3>各环节参与与提交</h3><p class="learning-legend"><span class="legend-attempt">已动手</span><span class="legend-submit">已提交</span></p>' +
+      '<ol class="learning-bars">' + data.stages.map(function (rate, index) {
+        return '<li><b><span>' + pad(index + 1) + '</span> ' + esc(stages[index][0]) + '</b>' +
+          learningBar(rate.attempted, 'attempt', '已动手') + learningBar(rate.submitted, 'submit', '已提交') + '</li>';
+      }).join('') + '</ol></section>';
+  }
+
+  function learningRadar(data) {
+    function point(index, value) {
+      var angle = index * Math.PI / 3 - Math.PI / 2;
+      return [Math.round((130 + Math.cos(angle) * value) * 100) / 100, Math.round((124 + Math.sin(angle) * value) * 100) / 100];
+    }
+    function polygon(radius) {
+      return data.stages.map(function (rate, index) { return point(index, radius).join(','); }).join(' ');
+    }
+    var marks = data.stages.map(function (rate, index) { return point(index, 0.93 * rate.milestone); });
+    return '<section class="learning-chart"><h3>学习过程雷达</h3><p class="learning-caption">达成各项观察点的学生占比</p><div class="learning-radar-body">' +
+      '<svg class="learning-radar" viewBox="0 0 260 248" aria-hidden="true" focusable="false">' + [23.25, 46.5, 69.75, 93].map(function (radius) {
+        return '<polygon class="radar-grid" points="' + polygon(radius) + '"/>';
+      }).join('') + data.stages.map(function (rate, index) {
+        var edge = point(index, 93);
+        var label = point(index, 110);
+        return '<line class="radar-grid" x1="130" y1="124" x2="' + edge[0] + '" y2="' + edge[1] + '"/>' +
+          '<text x="' + label[0] + '" y="' + (label[1] + 5) + '">' + pad(index + 1) + '</text>';
+      }).join('') + (marks.some(function (mark, index) { return data.stages[index].milestone > 0; }) ?
+        '<polygon class="radar-value" points="' + marks.map(function (mark) { return mark.join(','); }).join(' ') + '"/>' + marks.map(function (mark, index) {
+          return data.stages[index].milestone > 0 ? '<circle class="radar-point" cx="' + mark[0] + '" cy="' + mark[1] + '" r="4"/>' : '';
+        }).join('') : '') + '</svg><ol class="learning-observations">' + data.stages.map(function (rate, index) {
+        return '<li><span><b>' + pad(index + 1) + '</b> ' + esc(learningMilestones[index]) + '</span><strong>' + esc(percent(rate.milestone)) + '</strong></li>';
+      }).join('') + '</ol></div></section>';
+  }
+
+  function learningDistribution(data) {
+    return '<section class="learning-chart learning-distribution"><h3>探索范围分布</h3><p class="learning-caption">按每位学生动手操作过的环节数分组</p><ol>' + data.distribution.map(function (value, index) {
+      return '<li><strong>' + esc(percent(value)) + '</strong><svg class="distribution-track" aria-hidden="true" focusable="false"><rect y="' + (100 - value) + '%" width="100%" height="' + value + '%"/></svg><span>' + index + ' 项</span></li>';
+    }).join('') + '</ol></section>';
+  }
+
+  function paintLearning(panel, data) {
+    var overall = data.overall;
+    var best = 0;
+    data.stages.forEach(function (rate, index) { if (rate.milestone > data.stages[best].milestone) best = index; });
+    var milestone = data.stages[best].milestone;
+    var highlight = milestone > 0 ? learningMilestones[best] + ' ' + percent(milestone) : overall.attempted > 0 ? '已开始动手 ' + percent(overall.attempted) : '';
+    panel.innerHTML = '<div class="learning-summary">' + [['参与过活动', overall.attempted], ['达成过观察点', overall.milestone], ['提交过记录', overall.submitted]].map(function (entry) {
+      return '<div><span>' + entry[0] + '</span><strong>' + (data.hasStudents ? esc(percent(entry[1])) : '—') + '</strong></div>';
+    }).join('') + '</div>' + (highlight ? '<p class="learning-highlight"><b>学习亮点</b> ' + esc(highlight) + '</p>' : '') +
+      (data.hasStudents ? '<div class="learning-charts">' + learningBars(data) + '<div class="learning-side">' + learningRadar(data) + learningDistribution(data) + '</div></div>' +
+      '<p class="learning-source">以本堂课已入场学生为基数。仅打开任务不算动手；观察点不作判分。未提交的进展在本次服务运行期间保留。</p>' :
+      '<p class="learning-empty">还没有学生入场，暂不计算百分比。</p>');
+    id('learning-state').textContent = data.active ? '课堂进行中' : '课堂已结束';
+    state.active = data.active;
+    id('teacher-page-2').disabled = !data.active;
+  }
+
+  function fetchLearning() {
+    clearTimeout(refreshTimer);
+    var panel = id('learning-data');
+    var activeCode = state.code;
+    api('GET', roomURL() + '/learning?since=' + encodeURIComponent(learningRevision), null, function (status, data) {
+      if (teacherPage !== 3 || roomSwitch || !state || state.code !== activeCode || id('learning-data') !== panel) return;
+      if (status === 401) { access(data.error); return; }
+      if (status === 200) { learningRevision = data.revision; paintLearning(panel, data); }
+      id('learning-status').textContent = status === 200 || status === 204 ? '' : '暂时无法更新，正在重试。';
+      schedule();
+    });
+  }
+
+  function renderLearning() {
+    teacherPage = 3;
+    learningRevision = '';
+    id('teacher-layout').classList.remove('projecting');
+    id('teacher-layout').classList.add('learning-view');
+    id('classrooms').value = state.code;
+    message('');
+    id('classroom').innerHTML = '<section class="learning-head"><div><h2 id="learning-title" tabindex="-1">学习数据看板</h2><span>' + esc(state.title) + '</span></div><strong id="learning-state"></strong></section>' +
+      '<div id="learning-status" class="note" role="status"></div><div id="learning-data"><p class="learning-empty">正在读取课堂数据…</p></div>' + pager();
+    fetchLearning();
   }
 
   function monitorEmpty(text) {
@@ -1441,10 +1600,10 @@
   }
 
   function fetchFrame(run) {
-    if (!projection || !state || run !== watchRun) return;
+    if (teacherPage !== 2 || !state || run !== watchRun) return;
     if (document.hidden) { watchTimer = setTimeout(function () { fetchFrame(run); }, 800); return; }
     api('GET', roomURL() + '/live?seat=' + watchSeat + '&since=' + liveVersion + '&catalog=' + liveStage, null, function (status, data) {
-      if (!projection || run !== watchRun || !id('stage')) return;
+      if (teacherPage !== 2 || run !== watchRun || !id('stage')) return;
       if (status === 401) { access(data.error); return; }
       if (status === 200 && data.stage) {
         liveVersion = data.revision;
@@ -1591,7 +1750,7 @@
     'submit-stage': submitStage,
     logout: function () {
       api('POST', '/api/teacher/logout', {}, function (status, data) {
-        if (status === 200 || status === 401) { generation++; projection = false; access(); }
+        if (status === 200 || status === 401) { generation++; access(); }
         else failed(data);
       });
     },
@@ -1615,11 +1774,15 @@
       paintSeat(Number(previous));
       id('seat-' + previous).focus();
     },
-    projection: function () {
-      projection = !projection;
-      if (projection) renderProjection();
-      else { stopWatch(); renderRoom(); poll(); }
-      id('projection').focus();
+    'teacher-page': function (button, value) {
+      var page = Number(value);
+      if (page === teacherPage || roomSwitch || (page === 2 && !state.active)) return;
+      clearTimeout(refreshTimer);
+      stopWatch();
+      if (page === 2) renderProjection();
+      else if (page === 3) { renderLearning(); id('learning-title').focus(); return; }
+      else { renderRoom(); poll(); }
+      id('teacher-page-' + page).focus();
     }
   };
 

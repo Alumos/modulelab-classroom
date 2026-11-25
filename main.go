@@ -42,21 +42,23 @@ type submission struct {
 }
 
 type participant struct {
-	Name    string                  `json:"name"`
-	Seat    int                     `json:"seat,omitempty"`
-	Answers [stageCount]*submission `json:"answers"`
-	live    *liveFrame
+	Name     string                  `json:"name"`
+	Seat     int                     `json:"seat,omitempty"`
+	Answers  [stageCount]*submission `json:"answers"`
+	live     *liveFrame
+	learning [stageCount]learningEvidence
 }
 
 type classroom struct {
-	Code    string                  `json:"code"`
-	Title   string                  `json:"title"`
-	Created time.Time               `json:"created"`
-	Version uint64                  `json:"version"`
-	Reset   uint64                  `json:"reset,omitempty"`
-	Open    [stageCount]bool        `json:"open"`
-	People  map[string]*participant `json:"people"`
-	roster  uint64
+	Code             string                  `json:"code"`
+	Title            string                  `json:"title"`
+	Created          time.Time               `json:"created"`
+	Version          uint64                  `json:"version"`
+	Reset            uint64                  `json:"reset,omitempty"`
+	Open             [stageCount]bool        `json:"open"`
+	People           map[string]*participant `json:"people"`
+	roster           uint64
+	learningRevision uint64
 }
 
 type server struct {
@@ -400,6 +402,7 @@ func (app *server) student(res http.ResponseWriter, req *http.Request, parts []s
 				old := person.Answers[idx]
 				person.Answers[idx] = &submission{input.Values, input.Text, time.Now().UTC()}
 				if app.stored(res, room, func() { person.Answers[idx] = old }) {
+					room.recordLearning(person, idx, submittedEvidence(idx, input.Values))
 					if person.live != nil && person.live.Stage == idx+1 {
 						app.frames++
 						person.live.Revision = app.frames
@@ -616,6 +619,10 @@ func (app *server) teacher(res http.ResponseWriter, req *http.Request, parts []s
 				}
 				if parts[3] == "live" {
 					app.watchFrame(res, req, room)
+					return
+				}
+				if parts[3] == "learning" {
+					app.learningStats(res, req, room)
 					return
 				}
 				if parts[3] == "export" {

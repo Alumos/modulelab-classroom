@@ -205,6 +205,9 @@ func (app *server) publishFrame(res http.ResponseWriter, req *http.Request, room
 	if progressFor(person, person.live) != progressFor(person, &frame) {
 		room.roster++
 	}
+	if frame.Stage > 0 {
+		room.recordLearning(person, frame.Stage-1, draftEvidence(frame))
+	}
 	person.live = &frame
 	res.WriteHeader(204)
 }

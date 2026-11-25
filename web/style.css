@@ -122,6 +122,14 @@ input::placeholder, textarea::placeholder { color: #5d6c8a; opacity: 1; }
 .stage-footer, .inline-actions { display: flex; flex-wrap: wrap; align-items: center; margin-top: 21px; }
 .stage-footer { border-top: 1px solid #dce5fa; padding-top: 16px; }
 .stage-footer .note { margin: 7px 0 7px 15px; }
+.praise { display: flex; align-items: center; min-height: 96px; margin-top: 18px; padding: 10px 18px; border: 1px solid #ebc35d; border-radius: 16px; background: linear-gradient(110deg, #ffedb6, #fff9e8 76%); color: #493008; }
+.praise-badge { position: relative; display: flex; align-items: center; justify-content: center; flex: 0 0 64px; height: 64px; margin-right: 16px; border: 2px solid #edba41; border-radius: 50%; background: #fff5d6; }
+.praise-badge b { position: relative; z-index: 1; font: 900 43px/1 Arial, sans-serif; color: #9c5800; }
+.praise-badge i { position: absolute; top: calc(50% - 3px); left: calc(50% - 3px); width: 6px; height: 6px; border-radius: 2px; background: #b76a05; opacity: 0; }
+.praise-badge i:nth-of-type(2n) { background: #2461bc; }
+.praise-badge i:nth-of-type(3n) { background: #138369; }
+.praise span:not(.praise-badge) { display: block; font-size: 15px; font-weight: 800; }
+.praise strong { display: block; font-size: 22px; line-height: 1.35; }
 .inline-actions .button { margin: 0 9px 7px 0; }
 .blank-stage { min-height: 210px; display: flex; align-items: center; justify-content: center; }
 .showcase { width: 33.33%; max-width: 240px; }
@@ -505,10 +513,73 @@ input::placeholder, textarea::placeholder { color: #5d6c8a; opacity: 1; }
 .retrofit-option.installed .retrofit-mark { background: #147a65; color: white; }
 
 .room-state { display: inline-block; margin-top: 5px; font-weight: 700; color: #dce8ff; }
-.page-turn { display: table; margin: 13px 0 0 auto; padding: 6px; background: #fff; border: 1px solid #ccd9f5; border-radius: 13px; box-shadow: 0 4px 12px rgba(18,43,96,.18); }
-.page-turn span { margin: 0 9px; color: #30456f; font: 800 16px Arial,sans-serif; }
-@media (min-width: 1740px) {
-  .page-turn { position: fixed; z-index: 7; right: 2.5%; bottom: 19px; }
+.page-turn { display: flex; flex-wrap: wrap; justify-content: flex-end; margin-bottom: 12px; }
+.page-turn .button { margin: 3px; min-height: 42px; padding: 7px 12px; font-size: 16px; }
+@media (min-width: 2000px) {
+  .page-turn { position: fixed; z-index: 7; right: 2.5%; bottom: 19px; margin: 0; padding: 4px; background: #fff; border: 1px solid #ccd9f5; border-radius: 13px; box-shadow: 0 4px 12px rgba(18,43,96,.18); }
+}
+.learning-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 14px 20px; border-radius: 14px; background: #183784; color: #fff; }
+.learning-head span { color: #dce8ff; overflow-wrap: anywhere; }
+.learning-head strong { font-size: 15px; }
+.learning-summary { display: flex; margin: 8px -4px 0; }
+.learning-summary > div { flex: 1 1 0; min-width: 0; margin: 4px; padding: 12px 15px; border: 1px solid #cedcfa; border-radius: 12px; background: #e2ebff; }
+.learning-summary > div:nth-child(2) { border-color: #b9e4d6; background: #e4f5ef; }
+.learning-summary > div:nth-child(3) { border-color: #ded3f9; background: #f0ebfc; }
+.learning-summary span { display: block; font-size: 16px; font-weight: 800; line-height: 1.3; }
+.learning-summary strong { display: block; margin-top: 5px; font: 900 34px/1.12 Arial, sans-serif; }
+.learning-highlight { margin-top: 9px; padding: 8px 13px; border-left: 4px solid #d69416; border-radius: 8px; background: #fff3cf; color: #5c3d09; font-weight: 700; }
+.learning-highlight b { margin-right: 6px; }
+.learning-charts { display: flex; align-items: stretch; margin: 12px -6px 0; }
+.learning-chart { flex: 1 1 0; min-width: 0; padding: 14px 16px; border: 1px solid #d4dff6; border-radius: 14px; background: #fff; }
+.learning-charts > .learning-chart, .learning-side { margin: 0 6px; }
+.learning-charts > .learning-chart { flex-grow: 1.2; }
+.learning-side { flex: 1 1 0; min-width: 0; }
+.learning-caption, .learning-legend, .learning-source { margin-top: 4px; color: #465978; font-size: 15px; }
+.learning-legend span { display: inline-block; margin-right: 12px; }
+.learning-legend span::before { content: ''; display: inline-block; width: 11px; height: 11px; margin-right: 5px; border-radius: 3px; background: #157e69; }
+.learning-legend .legend-submit::before { background: #3257cd; }
+.learning-bars li { margin-top: 8px; }
+.learning-bars b { display: block; font-size: 16px; }
+.learning-bars b span, .learning-observations b { display: inline-block; min-width: 25px; color: #2448a9; font: 800 15px Arial, sans-serif; }
+.learning-bar-row { display: flex; align-items: center; min-height: 17px; }
+.learning-track, .distribution-track { overflow: hidden; border-radius: 5px; background: #edf1fa; }
+.learning-track { display: block; flex: 1 1 0; min-width: 0; height: 7px; }
+.learning-track rect { fill: #157e69; }
+.learning-track.submit rect, .distribution-track rect { fill: #3257cd; }
+.learning-bar-row strong, .learning-observations strong, .learning-distribution strong { font: 800 14px Arial, sans-serif; white-space: nowrap; }
+.learning-bar-row strong { min-width: 60px; padding-left: 5px; text-align: right; }
+.learning-radar { display: block; width: 100%; height: 192px; margin: 4px auto 0; }
+.learning-radar text { fill: #2448a9; text-anchor: middle; font: 800 16px Arial, sans-serif; }
+.radar-grid { fill: none; stroke: #bac9e9; stroke-width: 1.25; }
+.radar-value { fill: #237d6b; fill-opacity: .25; stroke: #157e69; stroke-width: 2.5; stroke-linejoin: round; }
+.radar-point { fill: #157e69; stroke: white; stroke-width: 1; }
+.learning-observations li { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; padding: 3px 5px; border-radius: 5px; font-size: 15px; background: #f3f6fd; }
+.learning-observations strong { margin-left: 5px; }
+.learning-distribution { margin-top: 12px; }
+.learning-distribution ol { display: flex; margin: 9px -3px 0; }
+.learning-distribution li { flex: 1 1 0; min-width: 0; margin: 0 3px; text-align: center; }
+.learning-distribution li > span { font-size: 14px; }
+.distribution-track { display: block; width: 100%; height: 75px; max-width: 64px; margin: 4px auto 0; }
+.learning-source { margin: 8px 1px 0; }
+.learning-empty { margin-top: 12px; padding: 16px; border-radius: 12px; background: #fff; }
+@media (min-width: 1120px) {
+  .learning-radar-body { display: flex; align-items: center; margin-top: 10px; }
+  .learning-radar { flex: 1 1 43%; min-width: 0; max-width: 245px; }
+  .learning-observations { flex: 1 1 57%; min-width: 0; margin-left: 8px; }
+}
+@media (max-width: 700px) {
+  .learning-charts { display: block; }
+  .learning-side { margin-top: 12px; }
+}
+@media (max-width: 460px) {
+  .learning-summary > div { padding: 9px 6px; text-align: center; }
+  .learning-summary span { font-size: 14px; }
+  .learning-summary strong { font-size: 24px; }
+  .learning-distribution { padding-left: 8px; padding-right: 8px; }
+  .learning-distribution strong { font-size: 12px; }
+  .page-turn .button { padding-left: 8px; padding-right: 8px; }
+  .praise { padding-left: 14px; }
+  .praise strong { font-size: 19px; }
 }
 .monitor-head { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; background: #183784; color: #fff; border-radius: 13px; padding: 12px 16px; margin-bottom: 10px; }
 .monitor-head > div { flex: 1 1 220px; }
@@ -527,6 +598,8 @@ input::placeholder, textarea::placeholder { color: #5d6c8a; opacity: 1; }
 @media (max-width: 850px) { .seat-card { flex-basis: calc(20% - 8px); } }
 @media (max-width: 620px) { .seat-card { flex-basis: calc(33.333% - 8px); } }
 .teacher-layout.projecting .teacher-head, .teacher-layout.projecting > .note, .teacher-layout.projecting .create-room { display: none; }
+.learning-view .teacher-head h1 { display: none; }
+.learning-view .teacher-menu { margin-left: auto; }
 .mirror-stage { width: 100%; }
 .mirror-stage button:disabled, .mirror-stage textarea:disabled, .mirror-stage select:disabled { opacity: 1; color: inherit; -webkit-text-fill-color: currentColor; }
 .mirror-stage .button.primary:disabled { color: #fff; }
