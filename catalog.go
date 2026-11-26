@@ -19,7 +19,7 @@ type project struct {
 	Modules []item `json:"modules"`
 }
 
-var stageNames = [stageCount]string{"探解无人机模块", "分析身边的模块", "探寻模块化优势", "我来模块化实践", "我是模块组装师", "无人机改造畅想"}
+var stageNames = [stageCount]string{"探解无人机模块", "探寻身边的模块", "探析模块化优势", "探索算法模块化", "探究模块组装过程", "智创无人机应用"}
 
 var drone = []item{
 	{"power", "动力模块", "电机带动螺旋桨，产生升力，也能改变飞行方向。", "propeller"},

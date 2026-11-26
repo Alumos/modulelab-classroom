@@ -4,8 +4,8 @@
   var root = document.getElementById('app');
   var artURL = '/art.svg?v=8#';
   var stages = [
-    ['探解无人机模块', 'drone'], ['分析身边的模块', 'cooker'], ['探寻模块化优势', 'drone'],
-    ['我来模块化实践', 'light'], ['我是模块组装师', 'board'], ['无人机改造畅想', 'retrofit-drone']
+    ['探解无人机模块', 'drone'], ['探寻身边的模块', 'cooker'], ['探析模块化优势', 'drone'],
+    ['探索算法模块化', 'light'], ['探究模块组装过程', 'board'], ['智创无人机应用', 'retrofit-drone']
   ];
   var teacher = /^\/teacher\/?$/.test(location.pathname);
   var code = '';

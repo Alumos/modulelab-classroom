@@ -121,7 +121,7 @@ func TestClassroomJourney(t *testing.T) {
 		t.Fatalf("incorrect totals: %s", dashboard.Body.String())
 	}
 	export := exercise(t, app, "GET", teacherRoom+"/export", nil, teacher, 200)
-	if !strings.Contains(export.Body.String(), "无人机改造畅想") || !strings.Contains(export.Body.String(), "运输挂钩 · 运送茶叶") || !strings.Contains(export.Body.String(), "'=换上") {
+	if !strings.Contains(export.Body.String(), "智创无人机应用") || !strings.Contains(export.Body.String(), "运输挂钩 · 运送茶叶") || !strings.Contains(export.Body.String(), "'=换上") {
 		t.Fatal("CSV missing activity or escaped cell")
 	}
 	exercise(t, app, "POST", teacherRoom+"/activity/6", map[string]bool{"open": false}, teacher, 200)
