@@ -11,6 +11,9 @@
   var code = '';
   var device = '';
   var state = null;
+  var preview = null;
+  var titleTaps = [];
+  var previewPending = false;
   var rooms = [];
   var stage = -1;
   var content = null;
@@ -102,8 +105,9 @@
   function feedback() { return '<p id="message" class="note" role="status" aria-live="polite"></p>'; }
 
   function header(label, action) {
+    var classroomLabel = !teacher && state && !preview ? btn(esc(label), 'preview', 'top-label preview-trigger') : '<span class="top-label">' + esc(label) + '</span>';
     return '<header class="top' + (!teacher && state ? ' student-top' : '') + '"><div class="top-inner"><a class="brand" href="' + (teacher ? '/teacher' : '/') + '">' + svg('brand') +
-      '<span>模块化的应用</span></a><div class="top-right">' + (label ? '<span class="top-label">' + esc(label) + '</span>' : '') + (action || '') + '</div>' +
+      '<span>模块化的应用</span></a><div class="top-right">' + (label ? classroomLabel : '') + (action || '') + '</div>' +
       (reducedMotion && (reducedMotion.matches || fullMotion) ? btn(fullMotion ? '跟随系统' : '播放完整动画', 'motion', 'button motion-button', 'id="motion"') : '') + '</div></header>';
   }
 
@@ -169,6 +173,7 @@
       drafts = {};
       deviceTrials = {};
       ratingPicks = [];
+      titleTaps = [];
       reviewing = false;
       root.innerHTML = header('', '') + '<main class="wrap entry"><div class="entry-grid"><section class="entry-copy">' +
         '<h1 id="join-status" aria-live="polite">正在进入课堂</h1>' + feedback() + '</section><div class="blueprint entry-art">' + svg('drone') + '</div></div>' + stageTiles() + '</main>';
@@ -199,6 +204,7 @@
 
   function canEnter(index) {
     if (!state.open[index]) return false;
+    if (preview) return true;
     for (var earlier = 0; earlier < index; earlier++) {
       if (state.open[earlier] && !ratingAt(earlier)) return false;
     }
@@ -212,21 +218,45 @@
     return -1;
   }
 
-  function startStudent(data) {
+  function startStudent(data, preferred) {
     state = data;
     code = data.code;
     if (location.search) {
       try { history.replaceState(null, '', '/'); } catch (error) { }
     }
     stage = -1;
-    root.innerHTML = header(state.title, '<span class="alias">' + esc(state.name) + '</span>') + '<main class="wrap student-layout">' +
+    root.innerHTML = header(state.title, preview ? btn('退出演示', 'leave-preview', 'button quiet') : '<span class="alias">' + esc(state.name) + '</span>') + '<main class="wrap student-layout">' +
       '<nav id="activity-nav" class="activity-nav" aria-label="课堂活动"></nav><section id="stage" class="stage"></section></main>';
     var next = nextActivity(0);
-    var first = next < 0 ? state.open.indexOf(true) : next;
+    var first = preferred >= 0 ? preferred : next < 0 ? state.open.indexOf(true) : next;
     if (allRated()) renderSummary();
     else if (first >= 0) loadStage(first, false);
     else { renderNav(); renderWaiting(); }
     schedule();
+  }
+
+  function openPreview() {
+    if (previewPending || !state || submitting) return;
+    var now = Date.now();
+    titleTaps = titleTaps.filter(function (tap) { return now - tap <= 1500; });
+    titleTaps.push(now);
+    if (titleTaps.length < 3) return;
+    titleTaps = [];
+    var currentCode = code;
+    previewPending = true;
+    api('GET', '/api/teacher/rooms/' + currentCode + '/preview', null, function (status, activities) {
+      previewPending = false;
+      if (status !== 200 || !state || code !== currentCode || submitting) return;
+      var preferred = stage;
+      preview = activities;
+      clearTimeout(liveTimer);
+      liveTimer = null;
+      queuedFrame = null;
+      drafts = {};
+      deviceTrials = {};
+      ratingPicks = [];
+      startStudent({code: code, title: state.title, open: stages.map(function () { return true; }), done: [], ratings: []}, preferred);
+    });
   }
 
   function renderNav() {
@@ -274,11 +304,12 @@
 
   function schedule() {
     clearTimeout(refreshTimer);
+    if (preview) return;
     refreshTimer = setTimeout(poll, teacher ? 2200 : 2600 + Math.random() * 1600);
   }
 
   function poll() {
-    if (!state) return;
+    if (!state || preview) return;
     if (document.hidden || roomSwitch) { schedule(); return; }
     if (teacher && teacherPage === 2) { fetchSeats(); return; }
     if (teacher && teacherPage === 3) { fetchLearning(); return; }
@@ -286,7 +317,7 @@
     var activeCode = state.code;
     var reset = state.reset;
     api('GET', teacher ? roomURL() : studentURL() + '/status?since=' + state.version, null, function (status, data) {
-      if (!state || state.code !== activeCode || (teacher ? teacherPage !== originPage : state.reset !== reset)) return;
+      if (!state || preview || state.code !== activeCode || (teacher ? teacherPage !== originPage : state.reset !== reset)) return;
       if (status === 200) {
         if (teacher) updateRoom(data);
         else if (reset !== data.reset) { join(); return; }
@@ -301,7 +332,7 @@
   }
 
   function queueFrame() {
-    if (teacher || !state || (stage >= 0 && !content)) return;
+    if (teacher || preview || !state || (stage >= 0 && !content)) return;
     var payload = {stage: stage + 1, draft: stage >= 0 ? draft() : {}};
     var encoded = JSON.stringify(payload);
     if (encoded === lastFrame && !liveBusy) { queuedFrame = null; return; }
@@ -371,6 +402,12 @@
     cancelGrabs();
     var request = ++generation;
     renderNav();
+    if (preview) {
+      content = preview[next];
+      if (!drafts[next]) drafts[next] = newDraft(null, next);
+      renderStage(focus ? 'stage-title' : '');
+      return;
+    }
     id('stage').innerHTML = title(next) + '<p class="instruction">正在打开活动…</p>' + feedback();
     api('GET', studentURL() + '/activity/' + (next + 1), null, function (status, data) {
       if (!state || request !== generation) return;
@@ -993,10 +1030,10 @@
   function renderStage(focus) {
     if (!content || !state || stage < 0) return;
     var activities = [stageOne, stageTwo, stageThree, stageFour, stageFive, stageSix];
-    id('stage').innerHTML = title(stage) + activities[stage]() + '<div id="praise" class="praise" role="status" hidden></div>' + ratingPicker() + '<div class="stage-footer">' +
+    id('stage').innerHTML = title(stage) + activities[stage]() + (preview ? feedback() : '<div id="praise" class="praise" role="status" hidden></div>' + ratingPicker() + '<div class="stage-footer">' +
       btn(ratingAt(stage) ? '更新记录和自评' : '保存自评并提交', 'submit-stage', 'button' + (ratingAt(stage) ? '' : ' primary'),
-      'id="submit-stage"' + (submitting || draft().playing ? ' disabled' : '')) + '<div id="review-actions"></div>' + feedback() + '</div>';
-    paintReviewActions();
+      'id="submit-stage"' + (submitting || draft().playing ? ' disabled' : '')) + '<div id="review-actions"></div>' + feedback() + '</div>');
+    if (!preview) paintReviewActions();
     if (stage === 0 || stage === 4) fitBoard(id('stage'));
     if (stage === 0 && draft().playing) {
       var flying = draft();
@@ -1060,7 +1097,7 @@
   }
 
   function submitStage() {
-    if (submitting || !content) return;
+    if (preview || submitting || !content) return;
     var saved = draft();
     var values = saved.values.slice();
     if (stage === 0 && saved.flight) values.push('flight');
@@ -1753,6 +1790,8 @@
       try { localStorage.setItem('modulelab-full-motion', fullMotion ? '1' : '0'); } catch (error) { }
       button.textContent = fullMotion ? '跟随系统' : '播放完整动画';
     },
+    preview: openPreview,
+    'leave-preview': function () { location.reload(); },
     navigate: function (button) { loadStage(Number(button.getAttribute('data-index')), true); },
     rate: function (button, value) {
       var rating = Number(value);

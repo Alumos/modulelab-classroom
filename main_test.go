@@ -98,6 +98,17 @@ func TestClassroomJourney(t *testing.T) {
 	exercise(t, app, "POST", "/api/student/current", device, nil, 200)
 	exercise(t, app, "GET", teacherRoom, nil, student, 401)
 	exercise(t, app, "POST", teacherRoom+"/activity/1", map[string]bool{"open": true}, student, 401)
+	previewPath := teacherRoom + "/preview"
+	exercise(t, app, "GET", previewPath, nil, student, 401)
+	beforePreview := exercise(t, app, "GET", teacherRoom, nil, teacher, 200).Body.String()
+	var activities []json.RawMessage
+	preview := exercise(t, app, "GET", previewPath, nil, teacher, 200)
+	if err := json.Unmarshal(preview.Body.Bytes(), &activities); err != nil || len(activities) != stageCount {
+		t.Fatalf("teacher preview should load all %d activities: %v", stageCount, err)
+	}
+	if afterPreview := exercise(t, app, "GET", teacherRoom, nil, teacher, 200).Body.String(); afterPreview != beforePreview {
+		t.Fatal("teacher preview must not change classroom state")
+	}
 
 	answers := []any{
 		testAnswer([]string{"camera", "power", "control", "gps", "radio", "battery", "flight"}, ""),
@@ -137,6 +148,7 @@ func TestClassroomJourney(t *testing.T) {
 	exercise(t, reopened, "GET", studentRoom+"/activity/6", nil, student, 423)
 	exercise(t, app, "POST", teacherRooms, map[string]string{"title": "六年级二班"}, teacher, 409)
 	other := create("六年级二班", room.Code)
+	exercise(t, app, "GET", previewPath, nil, teacher, 410)
 	exercise(t, app, "GET", studentRoom+"/status", nil, student, 410)
 	exercise(t, app, "POST", teacherRoom+"/activity/1", map[string]bool{"open": true}, teacher, 410)
 	exercise(t, app, "GET", teacherRoom+"/export", nil, teacher, 200)

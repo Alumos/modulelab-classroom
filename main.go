@@ -635,6 +635,14 @@ func (app *server) teacher(res http.ResponseWriter, req *http.Request, parts []s
 				return
 			}
 			if len(parts) == 4 && req.Method == "GET" {
+				if parts[3] == "preview" {
+					if room.Code != app.active {
+						reject(res, 410, "这堂课已结束。")
+						return
+					}
+					jsonOut(res, 200, catalog)
+					return
+				}
 				if parts[3] == "live-seats" {
 					app.liveSeats(res, req, room)
 					return

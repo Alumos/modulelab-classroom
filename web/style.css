@@ -27,6 +27,7 @@ input::placeholder, textarea::placeholder { color: #5d6c8a; opacity: 1; }
 .brand .art { width: 41px; height: 35px; margin-right: 8px; }
 .top-right { display: flex; align-items: center; max-width: 100%; min-width: 0; }
 .top-label { font-weight: 700; overflow-wrap: break-word; min-width: 0; }
+.preview-trigger { padding: 0; border: 0; background: none; touch-action: manipulation; user-select: none; }
 .alias { margin-left: 12px; padding: 4px 12px; background: #eaf0ff; color: #263f88; border-radius: 99px; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .art { display: block; width: 100%; height: auto; overflow: visible; flex-shrink: 0; }
 .initial { margin: 50px auto; width: 92%; max-width: 1100px; }
