@@ -503,13 +503,17 @@ func TestLightWorkspace(t *testing.T) {
 	bad := slices.Clone(values)
 	bad[11] = "0"
 	exercise(t, app, "POST", activity, testAnswer(bad, reflection), student, 400)
+	withoutText := map[string]any{"values": values, "rating": 4}
+	if response := exercise(t, app, "POST", activity, withoutText, student, 200).Body.String(); !strings.Contains(response, `"ratings":[0,0,0,4,0,0]`) {
+		t.Fatal("the program and self-rating must submit without a written reflection")
+	}
 	exercise(t, app, "POST", activity, testAnswer(values, reflection), student, 200)
 	stored := exercise(t, app, "GET", activity, nil, student, 200)
 	if !strings.Contains(stored.Body.String(), "blue:1500:off") || !strings.Contains(stored.Body.String(), "red:1000:on") {
 		t.Fatal("both programs must survive submission")
 	}
 	record := exercise(t, app, "GET", room+"/results?stage=4", nil, teacher, 200)
-	if !strings.Contains(record.Body.String(), "右转调用") || !strings.Contains(record.Body.String(), "独立 · 左转：绿色 · 0.5 秒") || !strings.Contains(record.Body.String(), "共用模块：1.5 秒 · 熄灭彩灯") {
+	if !strings.Contains(record.Body.String(), "右转调用") || !strings.Contains(record.Body.String(), "独立 · 左转：绿色 · 0.5 秒") || !strings.Contains(record.Body.String(), "共用模块：1.5 秒 · 熄灭彩灯") || !strings.Contains(record.Body.String(), reflection) {
 		t.Fatal("teacher record must show the new events and only the encapsulated commands")
 	}
 }

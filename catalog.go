@@ -318,8 +318,8 @@ func validate(idx int, values []string, text string) string {
 			return "请至少放入一张答案卡片再提交。"
 		}
 	case 3:
-		if len(values) != 12 || !slices.Equal(values[:5], lightCalls) || strings.TrimSpace(text) == "" {
-			return "请接好五处模块调用，写下你的发现。"
+		if len(values) != 12 || !slices.Equal(values[:5], lightCalls) {
+			return "请接好五处模块调用。"
 		}
 		for _, value := range values[5:11] {
 			if _, ok := parseLightSetting(value); !ok {

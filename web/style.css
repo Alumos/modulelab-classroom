@@ -166,7 +166,6 @@ input::placeholder, textarea::placeholder { color: #5d6c8a; opacity: 1; }
 .project-panel p { margin: 7px 0 14px; }
 .project-panel h3 { margin: 8px 0 10px; }
 .option-list .option { width: 100%; margin-top: 6px; }
-.memo { margin-top: 16px; }
 [data-piece] { touch-action: none; cursor: grab; }
 [data-piece]:active { cursor: grabbing; }
 .moving { opacity: .58; }
@@ -234,15 +233,17 @@ input::placeholder, textarea::placeholder { color: #5d6c8a; opacity: 1; }
 .light-lenses { stroke: #273448; stroke-width: 6; }
 .light-leds { opacity: 0; }
 .light-lit .light-leds { opacity: 1; }
-.light-glow { stroke: var(--led-color, #74bbff); stroke-width: 13; opacity: .36; }
-.light-beam { stroke: var(--led-color, #74bbff); stroke-width: 7; }
-.light-core { stroke: #fff; stroke-width: 2.8; }
-.light-blue { --led-color: #74bbff; }
-.light-amber { --led-color: #ffc451; }
-.light-green { --led-color: #69edaf; }
-.light-purple { --led-color: #d5a3ff; }
-.light-red { --led-color: #ff8983; }
+#light-spill stop { stop-color: #419cff; stop-color: var(--led-color, #419cff); }
+.light-glow { stroke: #419cff; stroke: var(--led-color, #419cff); stroke-width: 25; opacity: .49; }
+.light-beam { stroke: #419cff; stroke: var(--led-color, #419cff); stroke-width: 13; }
+.light-core { stroke: #fff; stroke-width: 4.5; }
+.light-blue { --led-color: #419cff; }
+.light-amber { --led-color: #ffad37; }
+.light-green { --led-color: #3afa9b; }
+.light-purple { --led-color: #cd6cff; }
+.light-red { --led-color: #ff5868; }
 .light-status { min-height: 1.55em; font-weight: 800; }
+.light-question { margin-top: 9px; color: #30456f; font-weight: 700; }
 .light-comparison { width: 100%; table-layout: fixed; margin-top: 9px; border-collapse: separate; border-spacing: 2px; text-align: center; font-size: 16px; line-height: 1.35; }
 .light-comparison th, .light-comparison td { padding: 6px 2px; background: #e9effb; border-radius: 6px; }
 .light-comparison small { display: block; margin-top: 2px; font-size: 14px; }

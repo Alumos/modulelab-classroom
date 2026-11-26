@@ -112,11 +112,6 @@
       '" value="' + esc(value) + '" ' + opts + '></label>';
   }
 
-  function textField(label, value, placeholder) {
-    return '<label class="field memo" for="response"><span>' + label + '</span><textarea id="response" maxlength="300" rows="3" placeholder="' +
-      esc(placeholder || '') + '">' + esc(value || '') + '</textarea></label>';
-  }
-
   function stageTiles() {
     return '<ol class="route-map">' + stages.map(function (info, index) {
       return '<li><span class="map-num">' + pad(index + 1) + '</span>' + svg(info[1]) + '<b>' + info[0] + '</b></li>';
@@ -714,10 +709,14 @@
       (mode === 'old' ? direct : modular) + '</section><section class="light-preview" aria-label="无人机预览"><div class="light-preview-head"><h2>无人机预览</h2>' +
       btn(saved.playing ? '停止' : '运行', 'run', 'button primary', 'id="run-lights"' + (mode === 'new' && !lights.shared ? ' disabled' : '')) + '</div>' +
       '<div class="light-flight" id="light-flight"><div class="light-drone"><svg class="art" viewBox="0 0 320 200" aria-hidden="true" focusable="false">' +
-      '<use xlink:href="' + artURL + 'drone"></use><path class="light-lenses" d="m54 129 10-2m193 0 10 2"/><g class="light-leds"><path class="light-glow" d="m54 129 10-2m193 0 10 2"/>' +
+      '<defs><radialGradient id="light-spill"><stop offset="0" stop-opacity=".95"/><stop offset=".31" stop-opacity=".58"/>' +
+      '<stop offset=".65" stop-opacity=".25"/><stop offset="1" stop-opacity="0"/></radialGradient></defs>' +
+      '<g class="light-leds" fill="url(#light-spill)"><ellipse cx="59" cy="127" rx="71" ry="58"/><ellipse cx="262" cy="127" rx="71" ry="58"/></g>' +
+      '<use xlink:href="' + artURL + 'drone"></use><path class="light-lenses" d="m54 129 10-2m193 0 10 2"/>' +
+      '<g class="light-leds"><path class="light-glow" d="m54 129 10-2m193 0 10 2"/>' +
       '<path class="light-beam" d="m54 129 10-2m193 0 10 2"/><path class="light-core" d="m54 129 10-2m193 0 10 2"/></g></svg></div>' +
-      '<p id="light-status" class="light-status" aria-live="polite">待运行</p></div>' + lightComparison(saved) + '</section></div>' +
-      textField('只改一处，两种写法有什么不同？', saved.text, '对比五段灯光，写下你的发现。');
+      '<p id="light-status" class="light-status" aria-live="polite">待运行</p></div>' + lightComparison(saved) +
+      '<p class="light-question">只改一处，两种写法有什么不同？</p></section></div>';
   }
 
   function syncLightPreview(saved, labels) {
@@ -1713,14 +1712,12 @@
 
   function paintFrame(frame) {
     var incoming = frame.draft;
-    var mirrorText = incoming.text || '';
     var isLights = frame.stage === 4;
     incoming.values = incoming.values || [];
     var layoutKey = JSON.stringify([frame.stage, frame.done, incoming], function (key, value) {
       return key === 'text' || (isLights && (key === 'preview' || key === 'lightStep' || key === 'lightLamp')) ? undefined : value;
     });
     if (layoutKey === paintedFrame) {
-      if (id('response') && id('response').value !== mirrorText) id('response').value = mirrorText;
       if (isLights) syncLightPreview(incoming, liveContent.calls);
       return;
     }
@@ -1908,7 +1905,6 @@
     if (action) action(button, button.getAttribute('data-value'), event);
   });
 
-  root.addEventListener('input', function (event) { if (!teacher && event.target.id === 'response' && draft()) { draft().text = event.target.value; queueFrame(); } });
   root.addEventListener('change', function (event) {
     var field = event.target.getAttribute('data-light-field');
     if (field && !teacher && stage === 3 && !draft().playing) {
